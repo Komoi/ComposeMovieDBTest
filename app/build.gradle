@@ -54,6 +54,7 @@ dependencies {
 	implementation deps.android_x.compose.ui
 	implementation deps.android_x.compose.material
 	implementation deps.android_x.compose.ui_tooling_preview
+	implementation deps.android_x.compose.material_icons_extended
 
 	// Dependency injection
 	implementation deps.dagger.hilt

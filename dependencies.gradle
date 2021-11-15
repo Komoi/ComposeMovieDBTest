@@ -49,9 +49,10 @@ ext.deps = [
 				design    : "com.google.android.material:material:${versions.material}",
 				activity  : "androidx.activity:activity-compose:${versions.activity}",
 				compose   : [
-						ui					: "androidx.compose.ui:ui:${versions.compose}",
-						material			: "androidx.compose.material:material:${versions.compose}",
-						ui_tooling_preview	: "androidx.compose.ui:ui-tooling-preview:${versions.compose}"
+						ui						: "androidx.compose.ui:ui:${versions.compose}",
+						material				: "androidx.compose.material:material:${versions.compose}",
+						material_icons_extended	: "androidx.compose.material:material-icons-extended:${versions.compose}",
+						ui_tooling_preview		: "androidx.compose.ui:ui-tooling-preview:${versions.compose}"
 				]
 		],
 		dagger       : [
