@@ -1,17 +1,19 @@
 plugins {
 	id 'com.android.application'
 	id 'kotlin-android'
+	id 'kotlin-android-extensions'
+	id "kotlin-kapt"
 }
 
 android {
-	compileSdk 31
+	compileSdk sdk.compile_sdk
 
 	defaultConfig {
 		applicationId "com.ondrejkomarek.composetest"
-		minSdk 23
-		targetSdk 31
-		versionCode 1
-		versionName "1.0"
+		minSdk sdk.min_sdk
+		targetSdk sdk.target_sdk
+		versionCode release.version_code
+		versionName release.version_name
 
 		testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 	}
@@ -22,9 +24,20 @@ android {
 			proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
 		}
 	}
+	kotlinOptions {
+		jvmTarget = JavaVersion.VERSION_1_8.toString()
+		useIR = true
+	}
 	compileOptions {
 		sourceCompatibility JavaVersion.VERSION_1_8
 		targetCompatibility JavaVersion.VERSION_1_8
+	}
+	buildFeatures {
+		compose true
+	}
+	composeOptions {
+		kotlinCompilerExtensionVersion '1.0.1'
+		kotlinCompilerVersion '1.5.10'
 	}
 	kotlinOptions {
 		jvmTarget = '1.8'
@@ -33,10 +46,36 @@ android {
 
 dependencies {
 
-	implementation 'androidx.core:core-ktx:1.7.0'
-	implementation 'androidx.appcompat:appcompat:1.3.1'
-	implementation 'com.google.android.material:material:1.4.0'
-	testImplementation 'junit:junit:4.+'
-	androidTestImplementation 'androidx.test.ext:junit:1.1.3'
-	androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+	// Android X
+	implementation deps.android_x.ktx_core
+	implementation deps.android_x.appcompat
+	implementation deps.android_x.design
+	implementation deps.android_x.activity
+	implementation deps.android_x.compose.ui
+	implementation deps.android_x.compose.material
+	implementation deps.android_x.compose.ui_tooling_preview
+
+	// Dependency injection
+	implementation deps.dagger.hilt
+	kapt deps.dagger.kapt
+
+	// JSON Serializer
+	implementation deps.serialization.moshi
+
+	// Networking
+	implementation deps.networking.retrofit.core
+	implementation deps.networking.retrofit.rxjava_adapter
+	implementation deps.networking.retrofit.moshi_converter
+
+	// Http client
+	implementation deps.networking.okhttp.client
+	implementation deps.networking.okhttp.logging
+
+	// Testing
+	testImplementation testing_deps.junit
+	testImplementation testing_deps.android_x.junit
+	testImplementation testing_deps.android_x.espresso_core
+	testImplementation testing_deps.android_x.ui_test_junit4
+	testImplementation testing_deps.android_x.ui_tooling
+
 }
