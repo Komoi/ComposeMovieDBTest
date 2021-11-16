@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
 	package="com.ondrejkomarek.composetest">
 
+ <uses-permission android:name="android.permission.INTERNET" />
+
 	<application
 		android:allowBackup="true"
 		android:label="@string/app_name"
@@ -19,6 +21,12 @@
 
 				<category android:name="android.intent.category.LAUNCHER" />
 			</intent-filter>
+		</activity>
+
+		<activity
+			android:name=".SecondActivity"
+			android:label="@string/app_name"
+			android:theme="@style/Theme.ComposeTest.NoActionBar">
 		</activity>
 	</application>
 </manifest>

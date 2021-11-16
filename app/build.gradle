@@ -56,6 +56,9 @@ dependencies {
 	implementation deps.android_x.compose.ui_tooling_preview
 	implementation deps.android_x.compose.material_icons_extended
 
+	// Coil image lib
+	implementation deps.image.coil
+
 	// Dependency injection
 	implementation deps.dagger.hilt
 	kapt deps.dagger.kapt

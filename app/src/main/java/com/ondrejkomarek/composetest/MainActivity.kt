@@ -1,5 +1,6 @@
 package com.ondrejkomarek.composetest
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -39,7 +40,7 @@ class MainActivity : ComponentActivity() {
 			ComposeTestTheme {
 				// A surface container using the 'background' color from the theme
 				Surface(color = MaterialTheme.colors.background) {
-					MyApp()
+					MyApp(onSecondButtonClicked = {startActivity(Intent(this, SecondActivity::class.java))})
 				}
 			}
 		}
@@ -47,12 +48,12 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MyApp() {
+fun MyApp(onSecondButtonClicked: () -> Unit) {
 	var shouldShowOnboarding by rememberSaveable { mutableStateOf(true) }
 
 
 	if (shouldShowOnboarding) { // Where does this come from?
-		OnboardingScreen(onContinueClicked = { shouldShowOnboarding = false })
+		OnboardingScreen(onContinueClicked = { shouldShowOnboarding = false }, onSecondButtonClicked = onSecondButtonClicked)
 	} else {
 		Greetings()
 	}
@@ -83,10 +84,14 @@ private fun Greeting(name: String) {
 		backgroundColor = MaterialTheme.colors.primary,
 		modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
 	) {
-		Row(modifier = Modifier.padding(Dp(24f)).animateContentSize(animationSpec = spring(
-			dampingRatio = Spring.DampingRatioHighBouncy,
-			stiffness = Spring.StiffnessVeryLow
-		))) {
+		Row(modifier = Modifier
+			.padding(Dp(24f))
+			.animateContentSize(
+				animationSpec = spring(
+					dampingRatio = Spring.DampingRatioHighBouncy,
+					stiffness = Spring.StiffnessVeryLow
+				)
+			)) {
 			Column(modifier = Modifier.weight(1f)) {
 				Text(text = "Hello, ")
 				Text(text = name, style = MaterialTheme.typography.h4)
@@ -111,7 +116,7 @@ fun DefaultPreview() {
 }
 
 @Composable
-fun OnboardingScreen(onContinueClicked: () -> Unit) {
+fun OnboardingScreen(onContinueClicked: () -> Unit, onSecondButtonClicked: () -> Unit) {
 	// TODO: This state should be hoisted
 
 	Surface {
@@ -127,6 +132,12 @@ fun OnboardingScreen(onContinueClicked: () -> Unit) {
 			) {
 				Text("Continue")
 			}
+			Button(
+				modifier = Modifier.padding(vertical = 24.dp),
+				onClick = onSecondButtonClicked
+			) {
+				Text("Open Second Codelab")
+			}
 		}
 	}
 }
@@ -135,6 +146,6 @@ fun OnboardingScreen(onContinueClicked: () -> Unit) {
 @Composable
 fun OnboardingPreview() {
 	ComposeTestTheme {
-		OnboardingScreen(onContinueClicked = {})
+		OnboardingScreen(onContinueClicked = {}, onSecondButtonClicked = {})
 	}
 }
