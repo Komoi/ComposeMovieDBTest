@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
 			ComposeTestTheme {
 				// A surface container using the 'background' color from the theme
 				Surface(color = MaterialTheme.colors.background) {
-					MyApp(onSecondButtonClicked = {startActivity(Intent(this, SecondActivity::class.java))})
+					MyApp(onSecondButtonClicked = {startActivity(Intent(this, SecondActivity::class.java))}, onThirdButtonClicked = {startActivity(Intent(this, ThirdActivity::class.java))})
 				}
 			}
 		}
@@ -48,12 +48,12 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MyApp(onSecondButtonClicked: () -> Unit) {
+fun MyApp(onSecondButtonClicked: () -> Unit, onThirdButtonClicked: () -> Unit) {
 	var shouldShowOnboarding by rememberSaveable { mutableStateOf(true) }
 
 
 	if (shouldShowOnboarding) { // Where does this come from?
-		OnboardingScreen(onContinueClicked = { shouldShowOnboarding = false }, onSecondButtonClicked = onSecondButtonClicked)
+		OnboardingScreen(onContinueClicked = { shouldShowOnboarding = false }, onSecondButtonClicked = onSecondButtonClicked, onThirdButtonClicked = onThirdButtonClicked)
 	} else {
 		Greetings()
 	}
@@ -116,7 +116,7 @@ fun DefaultPreview() {
 }
 
 @Composable
-fun OnboardingScreen(onContinueClicked: () -> Unit, onSecondButtonClicked: () -> Unit) {
+fun OnboardingScreen(onContinueClicked: () -> Unit, onSecondButtonClicked: () -> Unit, onThirdButtonClicked: () -> Unit) {
 	// TODO: This state should be hoisted
 
 	Surface {
@@ -136,7 +136,13 @@ fun OnboardingScreen(onContinueClicked: () -> Unit, onSecondButtonClicked: () ->
 				modifier = Modifier.padding(vertical = 24.dp),
 				onClick = onSecondButtonClicked
 			) {
-				Text("Open Second Codelab")
+				Text("Open Second Codelab A")
+			}
+			Button(
+				modifier = Modifier.padding(vertical = 24.dp),
+				onClick = onThirdButtonClicked
+			) {
+				Text("Open Second Codelab B")
 			}
 		}
 	}
@@ -146,6 +152,6 @@ fun OnboardingScreen(onContinueClicked: () -> Unit, onSecondButtonClicked: () ->
 @Composable
 fun OnboardingPreview() {
 	ComposeTestTheme {
-		OnboardingScreen(onContinueClicked = {}, onSecondButtonClicked = {})
+		OnboardingScreen(onContinueClicked = {}, onSecondButtonClicked = {}, onThirdButtonClicked = {})
 	}
 }
