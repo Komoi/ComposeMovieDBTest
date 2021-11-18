@@ -1,4 +1,4 @@
-package com.ondrejkomarek.composetest
+package com.ondrejkomarek.composetest.ui
 
 import android.content.Intent
 import android.os.Bundle
@@ -31,6 +31,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
+import com.ondrejkomarek.composetest.R
+import com.ondrejkomarek.composetest.ui.popular_movies.MovieListActivity
 import com.ondrejkomarek.composetest.ui.theme.ComposeTestTheme
 
 class MainActivity : ComponentActivity() {
@@ -40,7 +42,7 @@ class MainActivity : ComponentActivity() {
 			ComposeTestTheme {
 				// A surface container using the 'background' color from the theme
 				Surface(color = MaterialTheme.colors.background) {
-					MyApp(onSecondButtonClicked = {startActivity(Intent(this, SecondActivity::class.java))}, onThirdButtonClicked = {startActivity(Intent(this, ThirdActivity::class.java))})
+					MyApp(onSecondButtonClicked = {startActivity(Intent(this, SecondActivity::class.java))}, onThirdButtonClicked = {startActivity(Intent(this, ThirdActivity::class.java))}, onMovieButtonClicked = {startActivity(Intent(this, MovieListActivity::class.java))})
 				}
 			}
 		}
@@ -48,12 +50,12 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MyApp(onSecondButtonClicked: () -> Unit, onThirdButtonClicked: () -> Unit) {
+fun MyApp(onSecondButtonClicked: () -> Unit, onThirdButtonClicked: () -> Unit, onMovieButtonClicked: () -> Unit) {
 	var shouldShowOnboarding by rememberSaveable { mutableStateOf(true) }
 
 
 	if (shouldShowOnboarding) { // Where does this come from?
-		OnboardingScreen(onContinueClicked = { shouldShowOnboarding = false }, onSecondButtonClicked = onSecondButtonClicked, onThirdButtonClicked = onThirdButtonClicked)
+		OnboardingScreen(onContinueClicked = { shouldShowOnboarding = false }, onSecondButtonClicked = onSecondButtonClicked, onThirdButtonClicked = onThirdButtonClicked, onMovieButtonClicked = onMovieButtonClicked)
 	} else {
 		Greetings()
 	}
@@ -101,7 +103,8 @@ private fun Greeting(name: String) {
 			IconButton(
 				onClick = { expanded.value = !expanded.value }
 			) {
-				Icon(if(expanded.value) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = if (expanded.value) stringResource(R.string.show_less) else stringResource(R.string.show_more))
+				Icon(if(expanded.value) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = if (expanded.value) stringResource(
+					R.string.show_less) else stringResource(R.string.show_more))
 			}
 		}
 	}
@@ -116,7 +119,7 @@ fun DefaultPreview() {
 }
 
 @Composable
-fun OnboardingScreen(onContinueClicked: () -> Unit, onSecondButtonClicked: () -> Unit, onThirdButtonClicked: () -> Unit) {
+fun OnboardingScreen(onContinueClicked: () -> Unit, onSecondButtonClicked: () -> Unit, onThirdButtonClicked: () -> Unit, onMovieButtonClicked: () -> Unit) {
 	// TODO: This state should be hoisted
 
 	Surface {
@@ -144,6 +147,12 @@ fun OnboardingScreen(onContinueClicked: () -> Unit, onSecondButtonClicked: () ->
 			) {
 				Text("Open Second Codelab B")
 			}
+			Button(
+				modifier = Modifier.padding(vertical = 24.dp),
+				onClick = onMovieButtonClicked
+			) {
+				Text("Open Popular movies")
+			}
 		}
 	}
 }
@@ -152,6 +161,6 @@ fun OnboardingScreen(onContinueClicked: () -> Unit, onSecondButtonClicked: () ->
 @Composable
 fun OnboardingPreview() {
 	ComposeTestTheme {
-		OnboardingScreen(onContinueClicked = {}, onSecondButtonClicked = {}, onThirdButtonClicked = {})
+		OnboardingScreen(onContinueClicked = {}, onSecondButtonClicked = {}, onThirdButtonClicked = {}, onMovieButtonClicked = {})
 	}
 }

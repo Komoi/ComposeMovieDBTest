@@ -1,4 +1,4 @@
-package com.ondrejkomarek.composetest
+package com.ondrejkomarek.composetest.ui
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity

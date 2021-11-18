@@ -3,6 +3,7 @@ plugins {
 	id 'kotlin-android'
 	id 'kotlin-android-extensions'
 	id "kotlin-kapt"
+	id 'dagger.hilt.android.plugin'
 }
 
 android {
@@ -22,6 +23,12 @@ android {
 		release {
 			minifyEnabled false
 			proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+			buildConfigField("String", "API_BASE_URL", "\"https://api.themoviedb.org/3/\"")
+		}
+		debug {
+			minifyEnabled false
+			proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+			buildConfigField("String", "API_BASE_URL", "\"https://api.themoviedb.org/3/\"")
 		}
 	}
 	kotlinOptions {
@@ -62,7 +69,9 @@ dependencies {
 
 	// Dependency injection
 	implementation deps.dagger.hilt
+	implementation deps.dagger.hilt_lifecycle
 	kapt deps.dagger.kapt
+	kapt deps.dagger.hilt_kapt
 
 	// JSON Serializer
 	implementation deps.serialization.moshi
