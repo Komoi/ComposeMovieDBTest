@@ -44,6 +44,45 @@ class ThirdActivity : ComponentActivity() {
 }
 
 @Composable
+fun BodyContent(modifier: Modifier = Modifier) {
+	Column(modifier = modifier.horizontalScroll(rememberScrollState()).verticalScroll(rememberScrollState())) {
+		StaggeredGrid {
+			for (topic in topics) {
+				Chip(modifier = Modifier.padding(8.dp), text = topic)
+			}
+		}
+		ConstraintLayoutContent()
+		ConstraintLayoutContent2()
+		LargeConstraintLayout()
+		DecoupledConstraintLayout()
+		TwoTexts("asd1", "asd2")
+	}
+}
+
+@Composable
+fun TwoTexts(text1: String, text2: String, modifier: Modifier = Modifier) {
+	Row(modifier = modifier.height(IntrinsicSize.Min)) {
+		Text(
+			modifier = Modifier
+				//.weight(1f) TODO does not work as it should
+				.padding(start = 4.dp)
+				.wrapContentWidth(Alignment.Start),
+			text = text1
+		)
+
+		Divider(color = Color.Black, modifier = Modifier.fillMaxHeight().width(1.dp))
+		Text(
+			modifier = Modifier
+				//.weight(1f)
+				.padding(end = 4.dp)
+				.wrapContentWidth(Alignment.End),
+
+			text = text2
+		)
+	}
+}
+
+@Composable
 fun ConstraintLayoutContent() {
 	ConstraintLayout {
 
@@ -120,22 +159,6 @@ fun LargeConstraintLayout() {
 		)
 	}
 }
-
-@Composable
-fun BodyContent(modifier: Modifier = Modifier) {
-	Column(modifier = modifier.horizontalScroll(rememberScrollState()).verticalScroll(rememberScrollState())) {
-		StaggeredGrid {
-			for (topic in topics) {
-				Chip(modifier = Modifier.padding(8.dp), text = topic)
-			}
-		}
-		ConstraintLayoutContent()
-		ConstraintLayoutContent2()
-		LargeConstraintLayout()
-		DecoupledConstraintLayout()
-	}
-}
-
 
 @Composable
 fun DecoupledConstraintLayout() {
