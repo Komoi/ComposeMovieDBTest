@@ -62,6 +62,7 @@ dependencies {
 	implementation deps.android_x.compose.material
 	implementation deps.android_x.compose.ui_tooling_preview
 	implementation deps.android_x.compose.material_icons_extended
+	implementation deps.android_x.compose.navigation
 	implementation deps.constraintlayout.constraintlayout_compose
 
 	// Coil image lib
