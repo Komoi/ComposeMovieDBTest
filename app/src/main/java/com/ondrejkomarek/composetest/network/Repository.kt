@@ -2,10 +2,12 @@ package com.ondrejkomarek.composetest.network
 
 import com.ondrejkomarek.composetest.entity.ConfigurationEntity
 import com.ondrejkomarek.composetest.entity.MovieEntity
+import com.ondrejkomarek.composetest.entity.VideoDetailArbitraryEntity
 import com.ondrejkomarek.composetest.entity.VideosEntity
 import com.ondrejkomarek.composetest.mapper.MovieDetailMapper
 import com.ondrejkomarek.composetest.mapper.MovieMapper
 import com.ondrejkomarek.composetest.model.Movie
+import com.ondrejkomarek.composetest.model.MovieDetail
 import com.ondrejkomarek.composetest.utility.Either
 import com.ondrejkomarek.composetest.utility.Failure
 import com.ondrejkomarek.composetest.utility.left
@@ -36,14 +38,15 @@ class MovieRepository @Inject constructor(
 		}
 	}
 
-	suspend fun getMovieDetail(movieId: Int): Either<Failure, Movie> {
+	suspend fun getMovieDetail(movieId: Int): Either<Failure, MovieDetail> {
 		return when(networkHandler.isNetworkAvailable()) {
 			true -> try {
 				val configuration = api.fetchConfiguration()
 				val movie = api.getMovieDetail(movieId)
 				val videos = api.getVideos(movieId)
+				val cast = api.getCredits(movieId)
 
-				right(movieDetailMapper.mapToDomain(Triple(configuration, movie, videos)))
+				right(movieDetailMapper.mapToDomain(VideoDetailArbitraryEntity(configuration, movie, videos, cast)))
 			} catch(exception: Throwable) {
 				// TODO add error handler
 				left(Failure.ServerError)

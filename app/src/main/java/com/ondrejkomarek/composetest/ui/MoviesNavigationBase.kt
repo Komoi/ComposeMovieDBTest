@@ -23,9 +23,11 @@ import dagger.hilt.android.AndroidEntryPoint
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.navArgument
+import com.ondrejkomarek.composetest.model.Movie
 import com.ondrejkomarek.composetest.ui.movie_detail.MovieDetailViewModel
 
 const val movieIdArg = "movie_id"
+const val movieNameArg = "movie_name"
 
 @AndroidEntryPoint
 class MoviesActivity : ComponentActivity() {
@@ -53,8 +55,8 @@ import androidx.compose.runtime.setValue
 	var currentScreen by rememberSaveable { mutableStateOf(AppNavigationScreens.PopularMovies) }
 	val navController = rememberNavController()
 	Movies(navController) {
-		movieId ->
-		navController.navigate("${AppNavigationScreens.MovieDetail.name}/$movieId")
+		movie ->
+		navController.navigate("${AppNavigationScreens.MovieDetail.name}/${movie.id}/${movie.title}")
 
 	}
 }
@@ -62,37 +64,21 @@ import androidx.compose.runtime.setValue
 @Composable
 fun Movies(
 	navController: NavHostController,
-	onMovieClick: (Int) -> Unit
+	onPopularMovieClick: (Movie) -> Unit
 ) {
 
 	MoviesContent(
 		navController,
-		onMovieClick
+		onPopularMovieClick
 	)
 }
 
 @Composable
-fun MoviesContent(navController: NavHostController, onPopularMovieClick: (Int) -> Unit) {
-	Scaffold(
-		topBar = {
-			TopAppBar(
-				title = {
-					Text(text = "Popular movies")
-				},
-				backgroundColor = MaterialTheme.colors.primaryVariant,
-				actions = {
-					IconButton(onClick = { /* doSomething() */ }) {
-						Icon(Icons.Filled.Favorite, contentDescription = null)
-					}
-				}
-			)
-		}
-	) { innerPadding ->
-
+fun MoviesContent(navController: NavHostController, onPopularMovieClick: (Movie) -> Unit) {
 		NavHost(
 			navController = navController,
 			startDestination = AppNavigationScreens.PopularMovies.name,
-			modifier = Modifier.padding(innerPadding)
+			//modifier = Modifier.padding(innerPadding)
 		) {
 			composable(AppNavigationScreens.PopularMovies.name) {
 				val viewModel = hiltViewModel<PopularMoviesViewModel>()
@@ -100,15 +86,17 @@ fun MoviesContent(navController: NavHostController, onPopularMovieClick: (Int) -
 			}
 
 
-			composable(route = "${AppNavigationScreens.MovieDetail.name}/{$movieIdArg}",
+			composable(route = "${AppNavigationScreens.MovieDetail.name}/{$movieIdArg}/{$movieNameArg}",
 				arguments = listOf(
 					navArgument(movieIdArg) {
 						type = NavType.IntType
+					},
+					navArgument(movieNameArg) {
+						type = NavType.StringType
 					}
 				)) {
 				val viewModel = hiltViewModel<MovieDetailViewModel>()
 				MovieDetail(viewModel)
 			}
 		}
-	}
 }

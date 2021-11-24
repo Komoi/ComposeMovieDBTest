@@ -44,3 +44,28 @@ data class VideoEntity(
 	val publishedAt: String?,
 	val id: String?
 )
+
+data class CreditsEntity(
+	val id: Int,
+	val cast: List<CastEntity>
+)
+
+data class CastEntity(
+	@Json(name = "cast_id")
+	val castId: Int,
+	val character: String,
+	@Json(name = "credit_id")
+	val creditId: String,
+	val gender: Int?,
+	val name: String,
+	val order: Int,
+	@Json(name = "profile_path")
+	val profilePath: String?
+)
+
+data class VideoDetailArbitraryEntity(
+	val configurationEntity: ConfigurationEntity,
+	val movieEntity: MovieEntity,
+	val videosEntity: VideosEntity,
+	val creditsEntity: CreditsEntity
+)

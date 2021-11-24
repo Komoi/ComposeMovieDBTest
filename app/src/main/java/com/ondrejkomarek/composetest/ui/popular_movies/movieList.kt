@@ -14,6 +14,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.modifier.modifierLocalProvider
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -40,14 +41,25 @@ import javax.inject.Inject
 
 @ExperimentalCoilApi
 @Composable // for better reusability
-fun PopularMovies(viewModel: PopularMoviesViewModel, onMovieClick: (Int) -> Unit) {
+fun PopularMovies(viewModel: PopularMoviesViewModel, onPopularMovieClick: (Movie) -> Unit) {
 	val viewState = viewModel.state.collectAsState().value
 	val scrollState = rememberLazyListState()
 
-	Column() {
-		LazyColumn(state = scrollState) {
-			items(viewState.movies.size) {
-				MovieListCard(viewState.movies[it], onMovieClick)
+	Scaffold(
+		topBar = {
+			TopAppBar(
+				title = {
+					Text(text = "Popular movies")
+				},
+				backgroundColor = MaterialTheme.colors.primaryVariant // TODO theme
+			)
+		}
+	) { innerPadding ->
+		Column(Modifier.padding(innerPadding)) {
+			LazyColumn(state = scrollState) {
+				items(viewState.movies.size) {
+					MovieListCard(viewState.movies[it], onPopularMovieClick)
+				}
 			}
 		}
 	}
@@ -55,14 +67,14 @@ fun PopularMovies(viewModel: PopularMoviesViewModel, onMovieClick: (Int) -> Unit
 
 @ExperimentalCoilApi
 @Composable // for better reusability
-fun MovieListCard(movieItem: Movie, onMovieClick: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun MovieListCard(movieItem: Movie, onMovieClick: (Movie) -> Unit, modifier: Modifier = Modifier) {
 	Card(
 		backgroundColor = MaterialTheme.colors.surface,
 		modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
 	){
 		Row(
 			modifier = modifier
-				.clickable(onClick = { onMovieClick(movieItem.id) })
+				.clickable(onClick = { onMovieClick(movieItem) })
 				.padding(16.dp)
 				.fillMaxWidth(1f)
 		) {
