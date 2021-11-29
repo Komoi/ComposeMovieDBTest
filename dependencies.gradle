@@ -35,6 +35,7 @@ ext.versions = [
 		constraintlayout_compose        : "1.0.0-rc02",
 		moshi              				: "1.10.0",
 		okhttp             				: "4.8.1",
+		youtube_player     				: "10.0.5",
 
 		//TESTING ONLY
 		junit              				: "4.13",
@@ -86,6 +87,7 @@ ext.deps = [
 		constraintlayout: [
 				constraintlayout_compose: "androidx.constraintlayout:constraintlayout-compose:${versions.constraintlayout_compose}",
 		],
+		youtube_player	: "com.pierfrancescosoffritti.androidyoutubeplayer:core:${versions.youtube_player}",
 ]
 
 ext.testing_deps = [

@@ -1,19 +1,19 @@
 package com.ondrejkomarek.composetest.ui.movie_detail
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import android.app.Activity
+import android.content.pm.ActivityInfo
+import android.util.Log
+import androidx.activity.compose.LocalActivityResultRegistryOwner
+import androidx.annotation.NonNull
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -22,36 +22,40 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layoutId
-import androidx.compose.ui.modifier.modifierLocalConsumer
-import androidx.compose.ui.modifier.modifierLocalProvider
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.constraintlayout.compose.ConstraintSet
 import androidx.constraintlayout.compose.MotionLayout
-import androidx.constraintlayout.compose.MotionScene
-import androidx.constraintlayout.compose.layoutId
 import androidx.lifecycle.SavedStateHandle
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import coil.request.ImageRequest
 import coil.size.Scale
 import coil.transform.RoundedCornersTransformation
-import com.ondrejkomarek.composetest.R
 import com.ondrejkomarek.composetest.model.Actor
 import com.ondrejkomarek.composetest.model.MovieDetail
 import com.ondrejkomarek.composetest.network.MovieRepository
 import com.ondrejkomarek.composetest.ui.BaseViewModel
 import com.ondrejkomarek.composetest.ui.movieIdArg
 import com.ondrejkomarek.composetest.ui.movieNameArg
+import com.ondrejkomarek.composetest.ui.universal.EmptyState
+import com.ondrejkomarek.composetest.ui.universal.MyCircularProgressIndicator
 import com.ondrejkomarek.composetest.utility.Failure
+import com.ondrejkomarek.composetest.utility.FullScreenHelper
 import com.ondrejkomarek.composetest.utility.ScreenState
 import com.ondrejkomarek.composetest.utility.fold
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.YouTubePlayerFullScreenListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -131,18 +135,24 @@ fun MovieDetail(viewModel: MovieDetailViewModel) {
 		}
 	}*/
 
-	CollapsableToolbar(viewState)
+	// TODO reenable later when MotionLayout works CollapsableToolbar(viewState, viewState.movieDetail?.actors)
+	when(viewState.state) {
+		ScreenState.CONTENT -> MovieDetailContent(viewState, viewState.movieDetail?.actors)
+		ScreenState.PROGRESS -> MyCircularProgressIndicator()
+		ScreenState.EMPTY -> EmptyState()
+	}
 }
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun CollapsableToolbar(viewState: MovieDetailState) {
+fun CollapsableToolbar(viewState: MovieDetailState, actorList: List<Actor>?) {
 	val scrollState = rememberLazyListState()
 	val swipingState = rememberSwipeableState(initialValue = SwipingStates.EXPANDED)
 
 	BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
 
 		val heightInPx = with(LocalDensity.current) { maxHeight.toPx() } // Get height of screen
+		// TODO reenable with motion layout
 		val connection = remember {
 			object : NestedScrollConnection {
 
@@ -205,10 +215,10 @@ fun CollapsableToolbar(viewState: MovieDetailState) {
 					viewState.movieDetail?.title ?: "",
 					viewState.movieDetail?.releaseDate ?: "",
 					viewState.movieDetail?.overview ?: "",
-					progress = if (swipingState.progress.to == SwipingStates.COLLAPSED) swipingState.progress.fraction else 1f - swipingState.progress.fraction,
+					progress = if(swipingState.progress.to == SwipingStates.COLLAPSED) swipingState.progress.fraction else 1f - swipingState.progress.fraction,
 					swipingState = swipingState.currentValue
-					) {
-					viewState.movieDetail?.actors?.let { actors ->
+				) {
+					actorList?.let { actors ->
 						LazyColumn(state = scrollState) {
 							items(actors.size) {
 								ActorList(actors[it])
@@ -221,8 +231,148 @@ fun CollapsableToolbar(viewState: MovieDetailState) {
 	}
 }
 
+
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun MotionComposeHeader(posterUrl: String, movieTitle: String, releaseDate: String, movieOverview: String, progress: Float, swipingState: SwipingStates, scrollableBody: @Composable () -> Unit) {
+fun MovieDetailContent(viewState: MovieDetailState, actorList: List<Actor>?) {
+	val scrollState = rememberLazyListState()
+	val videoProgress = rememberSaveable { mutableStateOf(0f) }
+
+	BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+
+		Column() {
+
+			actorList?.let { actors ->
+				LazyColumn(state = scrollState) {
+					item {
+						Column(modifier = Modifier.fillMaxWidth()) {
+							val movieTitle = viewState.movieDetail?.title ?: ""
+							val releaseDate = viewState.movieDetail?.releaseDate ?: ""
+							val posterUrl = viewState.movieDetail?.posterUrl ?: ""
+							val movieOverview = viewState.movieDetail?.overview ?: ""
+
+							val configuration = LocalConfiguration.current
+
+							val screenHeight = configuration.screenHeightDp.dp
+							val screenWidth = configuration.screenWidthDp.dp
+
+							Column() {
+
+								Image(
+									painter = rememberImagePainter(
+										data = posterUrl,
+										builder = {
+											ImageRequest.Builder(LocalContext.current)
+												.transformations(
+													RoundedCornersTransformation(12f)
+												).scale(Scale.FILL)
+										}
+									),
+									contentDescription = "Movie poster",
+									modifier = Modifier
+										.fillMaxWidth(1f)
+										// TODO does not work, 0 heightm not sure why .wrapContentHeight(Top)
+										.height(screenWidth / 2 * 3) // TODO do not display image when on landscape, show video instead.
+										.layoutId("poster")
+										.background(MaterialTheme.colors.primaryVariant),
+									contentScale = ContentScale.FillWidth
+								)
+
+								Column(Modifier.padding(start = 16.dp, end = 16.dp)) {
+									Text(
+										text = movieTitle,
+										modifier = Modifier
+											.layoutId("title")
+											.wrapContentHeight()
+											.padding(top = 24.dp)
+											.fillMaxWidth(1f),
+										style = MaterialTheme.typography.h6,
+										textAlign = TextAlign.Start,
+
+										)
+
+									CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
+										Text(
+											releaseDate,
+											style = MaterialTheme.typography.body2
+										)
+									}
+									Text(
+										movieOverview,
+										Modifier
+											.wrapContentHeight(Alignment.Top)
+											.padding(top = 8.dp, bottom = 16.dp)
+									)
+								}
+
+								viewState.movieDetail?.videoId?.let {
+									YoutubePlayer(it, videoProgress)
+								}
+							}
+
+						}
+					}
+
+					items(actors.size) {
+						ActorList(actors[it])
+					}
+				}
+			}
+		}
+	}
+}
+
+@Composable
+fun YoutubePlayer(videoId: String, progressSeconds: MutableState<Float>) {
+	val activity = LocalContext.current  as Activity
+	val lifecycle = LocalLifecycleOwner.current.lifecycle
+	val fullscreenHelper = rememberSaveable { FullScreenHelper() }
+
+	val youTubePlayer = remember(activity) {
+		YouTubePlayerView(activity).apply {
+			addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
+				override fun onReady(@NonNull youTubePlayer: YouTubePlayer) {
+					youTubePlayer.cueVideo(videoId, progressSeconds.value)
+				}
+
+				override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) {
+					progressSeconds.value = second
+				}
+			})
+			addFullScreenListener(object : YouTubePlayerFullScreenListener {
+				override fun onYouTubePlayerEnterFullScreen() {
+					activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
+					fullscreenHelper.enterFullScreen(activity)
+					Log.d("asd", "onYouTubePlayerEnterFullScreen")
+				}
+
+				override fun onYouTubePlayerExitFullScreen() {
+					activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR)
+					fullscreenHelper.exitFullScreen(activity)
+					Log.d("asd", "onYouTubePlayerExitFullScreen")
+				}
+			})
+		}
+	}
+
+	lifecycle.addObserver(youTubePlayer)
+
+	AndroidView(
+		factory = { youTubePlayer }
+	)
+}
+
+
+@Composable
+fun MotionComposeHeader(
+	posterUrl: String,
+	movieTitle: String,
+	releaseDate: String,
+	movieOverview: String,
+	progress: Float,
+	swipingState: SwipingStates,
+	scrollableBody: @Composable () -> Unit
+) {
 
 	MotionLayout(
 		start = JsonConstraintSetStart(),
@@ -250,16 +400,8 @@ fun MotionComposeHeader(posterUrl: String, movieTitle: String, releaseDate: Stri
 				.background(MaterialTheme.colors.primaryVariant),
 			contentScale = ContentScale.FillWidth,
 			alpha = 1f - progress
-			)
-		/*Image(
-			painter = painterResource(id = R.drawable.poster),
-			contentDescription = "poster",
-			modifier = Modifier
-				.layoutId("poster")
-				.background(MaterialTheme.colors.primary),
-			contentScale = ContentScale.FillWidth,
-			alpha = 1f - progress // Update alpha based on progress. Expanded -> 1f / Collapsed -> 0f (transparent)
-		)*/
+		)
+
 		Text(
 			text = movieTitle,
 			maxLines = when(swipingState) {
@@ -271,12 +413,18 @@ fun MotionComposeHeader(posterUrl: String, movieTitle: String, releaseDate: Stri
 				.layoutId("title")
 				.wrapContentHeight()
 				.fillMaxWidth(1f),
-			color = motionColor("title", "textColor"), // Extracting color value from motionProperties
-			fontSize = motionFontSize("title", "textSize"), // Extracting font size value from motionProperties
+			color = motionColor(
+				"title",
+				"textColor"
+			), // Extracting color value from motionProperties
+			fontSize = motionFontSize(
+				"title",
+				"textSize"
+			), // Extracting font size value from motionProperties
 			style = MaterialTheme.typography.h6,
 			textAlign = TextAlign.Start,
 
-		)
+			)
 		Box(
 			Modifier
 				.layoutId("content")
@@ -336,7 +484,8 @@ enum class SwipingStates {
 }
 
 @Composable
-private fun JsonConstraintSetStart() = ConstraintSet (""" {
+private fun JsonConstraintSetStart() = ConstraintSet(
+	""" {
 	poster: { 
 		width: "spread",
 		height: "wrap", // switch to "packed" and back when on screen to fix this :O 
@@ -358,10 +507,12 @@ private fun JsonConstraintSetStart() = ConstraintSet (""" {
 		end: ['parent', 'end', 0],
 		top: ['title', 'bottom', 16],
 	}
-} """ )
+} """
+)
 
 @Composable
-private fun JsonConstraintSetEnd() = ConstraintSet (""" {
+private fun JsonConstraintSetEnd() = ConstraintSet(
+	""" {
 	poster: { 
 		width: "spread",
 		height: 56,
@@ -386,7 +537,8 @@ private fun JsonConstraintSetEnd() = ConstraintSet (""" {
 		top: ['poster', 'bottom', 0],
 	}
                   
-} """)
+} """
+)
 
 
 @HiltViewModel
@@ -404,7 +556,8 @@ class MovieDetailViewModel @Inject constructor(
 
 	init {
 		val movieId = requireNotNull(savedStateHandle.get<Int>(movieIdArg)) { "Movie id is null" }
-		movieName = requireNotNull(savedStateHandle.get<String>(movieNameArg)) { "Movie name is null" }
+		movieName =
+			requireNotNull(savedStateHandle.get<String>(movieNameArg)) { "Movie name is null" }
 		launch {
 			loadMovie(movieId)
 		}

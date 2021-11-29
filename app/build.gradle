@@ -87,6 +87,9 @@ dependencies {
 	implementation deps.networking.okhttp.client
 	implementation deps.networking.okhttp.logging
 
+	// YouTube Player
+	implementation deps.youtube_player
+
 	// Testing
 	testImplementation testing_deps.junit
 	testImplementation testing_deps.android_x.junit

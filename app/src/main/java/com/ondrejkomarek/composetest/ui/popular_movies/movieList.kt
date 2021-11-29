@@ -1,35 +1,29 @@
 package com.ondrejkomarek.composetest.ui.popular_movies
 
-import androidx.activity.viewModels
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.modifier.modifierLocalProvider
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import coil.request.ImageRequest
 import coil.transform.RoundedCornersTransformation
 import com.ondrejkomarek.composetest.model.Movie
-import com.ondrejkomarek.composetest.navigation.AppNavigationScreens
 import com.ondrejkomarek.composetest.network.MovieRepository
 import com.ondrejkomarek.composetest.ui.BaseViewModel
-import com.ondrejkomarek.composetest.ui.movie_detail.MovieDetail
+import com.ondrejkomarek.composetest.ui.movie_detail.MovieDetailContent
+import com.ondrejkomarek.composetest.ui.universal.EmptyState
+import com.ondrejkomarek.composetest.ui.universal.MyCircularProgressIndicator
 import com.ondrejkomarek.composetest.utility.Failure
 import com.ondrejkomarek.composetest.utility.ScreenState
 import com.ondrejkomarek.composetest.utility.fold
@@ -43,7 +37,6 @@ import javax.inject.Inject
 @Composable // for better reusability
 fun PopularMovies(viewModel: PopularMoviesViewModel, onPopularMovieClick: (Movie) -> Unit) {
 	val viewState = viewModel.state.collectAsState().value
-	val scrollState = rememberLazyListState()
 
 	Scaffold(
 		topBar = {
@@ -55,11 +48,24 @@ fun PopularMovies(viewModel: PopularMoviesViewModel, onPopularMovieClick: (Movie
 			)
 		}
 	) { innerPadding ->
-		Column(Modifier.padding(innerPadding)) {
-			LazyColumn(state = scrollState) {
-				items(viewState.movies.size) {
-					MovieListCard(viewState.movies[it], onPopularMovieClick)
-				}
+
+		when(viewState.state) {
+			ScreenState.CONTENT -> PopularMoviesContent(viewState, onPopularMovieClick, Modifier.padding(innerPadding))
+			ScreenState.PROGRESS -> MyCircularProgressIndicator()
+			ScreenState.EMPTY -> EmptyState()
+		}
+	}
+}
+
+@ExperimentalCoilApi
+@Composable // for better reusability
+fun PopularMoviesContent(viewState: PopularMoviesListState, onPopularMovieClick: (Movie) -> Unit, modifier: Modifier = Modifier) {
+	val scrollState = rememberLazyListState()
+
+	Column(modifier) {
+		LazyColumn(state = scrollState) {
+			items(viewState.movies.size) {
+				MovieListCard(viewState.movies[it], onPopularMovieClick)
 			}
 		}
 	}
@@ -71,7 +77,7 @@ fun MovieListCard(movieItem: Movie, onMovieClick: (Movie) -> Unit, modifier: Mod
 	Card(
 		backgroundColor = MaterialTheme.colors.surface,
 		modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
-	){
+	) {
 		Row(
 			modifier = modifier
 				.clickable(onClick = { onMovieClick(movieItem) })
@@ -87,7 +93,10 @@ fun MovieListCard(movieItem: Movie, onMovieClick: (Movie) -> Unit, modifier: Mod
 				Image(
 					painter = rememberImagePainter(
 						data = movieItem.posterUrl,
-						builder = { ImageRequest.Builder(LocalContext.current).transformations(RoundedCornersTransformation(12f)) }
+						builder = {
+							ImageRequest.Builder(LocalContext.current)
+								.transformations(RoundedCornersTransformation(12f))
+						}
 					),
 					contentDescription = "Movie poster",
 					modifier = Modifier
@@ -128,7 +137,8 @@ class PopularMoviesViewModel @Inject constructor(
 		}
 	}
 
-	private suspend fun loadMovies() = movieRepository.getMovies().fold(::handleFailure, ::handleMovieList)
+	private suspend fun loadMovies() =
+		movieRepository.getMovies().fold(::handleFailure, ::handleMovieList)
 
 	private fun handleFailure(failure: Failure) {
 		_state.value = PopularMoviesListState(
