@@ -66,74 +66,6 @@ import javax.inject.Inject
 @Composable // for better reusability
 fun MovieDetail(viewModel: MovieDetailViewModel) {
 	val viewState = viewModel.state.collectAsState().value
-	val scrollState = rememberLazyListState()
-
-	/*Scaffold(
-		topBar = {
-			TopAppBar(
-				title = {
-					Text(text = viewModel.movieName, maxLines = 1, overflow = TextOverflow.Ellipsis)
-				},
-				backgroundColor = MaterialTheme.colors.primaryVariant,
-				actions = {
-					IconButton(onClick = { /* doSomething() */ }) {
-						Icon(Icons.Outlined.Favorite, contentDescription = null)
-					}
-				}
-			)
-		}
-	) { innerPadding ->
-
-		Column(Modifier.fillMaxWidth(1f)) {
-			Surface(
-				color = MaterialTheme.colors.onSurface,
-				shape = RoundedCornerShape(12.dp),
-				modifier = Modifier
-					.fillMaxWidth(1f)
-					.padding(innerPadding)
-			) {
-				Image(
-					painter = rememberImagePainter(
-						data = viewState.movieDetail?.posterUrl,
-						builder = {
-							ImageRequest.Builder(LocalContext.current).transformations(
-								RoundedCornersTransformation(12f)
-							)
-						}
-					),
-					contentDescription = "Movie poster",
-					modifier = Modifier
-						.fillMaxWidth(1f),
-				)
-			}
-			Column(
-				modifier = Modifier
-					.fillMaxWidth(1f)
-					.padding(start = 16.dp, end = 16.dp)
-					.align(Alignment.CenterHorizontally)
-			) {
-				Text(viewState.movieDetail?.title ?: "", fontWeight = FontWeight.Bold)
-				// LocalContentAlpha is defining opacity level of its children
-				CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
-					Text(
-						viewState.movieDetail?.releaseDate ?: "",
-						style = MaterialTheme.typography.body2
-					)
-				}
-				viewState.movieDetail?.overview?.let {
-					Text(it)
-				}
-				Text("Actors:", fontWeight = FontWeight.Bold)
-				viewState.movieDetail?.actors?.let { actors ->
-					LazyColumn(state = scrollState) {
-						items(actors.size) {
-							ActorList(actors[it])
-						}
-					}
-				}
-			}
-		}
-	}*/
 
 	// TODO reenable later when MotionLayout works CollapsableToolbar(viewState, viewState.movieDetail?.actors)
 	when(viewState.state) {
@@ -237,6 +169,7 @@ fun CollapsableToolbar(viewState: MovieDetailState, actorList: List<Actor>?) {
 fun MovieDetailContent(viewState: MovieDetailState, actorList: List<Actor>?) {
 	val scrollState = rememberLazyListState()
 	val videoProgress = rememberSaveable { mutableStateOf(0f) }
+	val isFullscreen = rememberSaveable { mutableStateOf(false) }
 
 	BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
 
@@ -245,7 +178,7 @@ fun MovieDetailContent(viewState: MovieDetailState, actorList: List<Actor>?) {
 			actorList?.let { actors ->
 				LazyColumn(state = scrollState) {
 					item {
-						Column(modifier = Modifier.fillMaxWidth()) {
+						Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
 							val movieTitle = viewState.movieDetail?.title ?: ""
 							val releaseDate = viewState.movieDetail?.releaseDate ?: ""
 							val posterUrl = viewState.movieDetail?.posterUrl ?: ""
@@ -258,63 +191,70 @@ fun MovieDetailContent(viewState: MovieDetailState, actorList: List<Actor>?) {
 
 							Column() {
 
-								Image(
-									painter = rememberImagePainter(
-										data = posterUrl,
-										builder = {
-											ImageRequest.Builder(LocalContext.current)
-												.transformations(
-													RoundedCornersTransformation(12f)
-												).scale(Scale.FILL)
-										}
-									),
-									contentDescription = "Movie poster",
-									modifier = Modifier
-										.fillMaxWidth(1f)
-										// TODO does not work, 0 heightm not sure why .wrapContentHeight(Top)
-										.height(screenWidth / 2 * 3) // TODO do not display image when on landscape, show video instead.
-										.layoutId("poster")
-										.background(MaterialTheme.colors.primaryVariant),
-									contentScale = ContentScale.FillWidth
-								)
-
-								Column(Modifier.padding(start = 16.dp, end = 16.dp)) {
-									Text(
-										text = movieTitle,
+								if(!isFullscreen.value) {
+									Image(
+										painter = rememberImagePainter(
+											data = posterUrl,
+											builder = {
+												ImageRequest.Builder(LocalContext.current)
+													.transformations(
+														RoundedCornersTransformation(12f)
+													).scale(Scale.FILL)
+											}
+										),
+										contentDescription = "Movie poster",
 										modifier = Modifier
-											.layoutId("title")
-											.wrapContentHeight()
-											.padding(top = 24.dp)
-											.fillMaxWidth(1f),
-										style = MaterialTheme.typography.h6,
-										textAlign = TextAlign.Start,
+											.fillMaxWidth(1f)
+											// TODO does not work, 0 heightm not sure why .wrapContentHeight(Top)
+											.height(screenWidth / 2 * 3) // TODO do not display image when on landscape, show video instead.
+											.layoutId("poster")
+											.background(MaterialTheme.colors.primaryVariant),
+										contentScale = ContentScale.FillWidth
+									)
 
-										)
-
-									CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
+									Column(Modifier.padding(start = 16.dp, end = 16.dp)) {
 										Text(
-											releaseDate,
-											style = MaterialTheme.typography.body2
+											text = movieTitle,
+											modifier = Modifier
+												.layoutId("title")
+												.wrapContentHeight()
+												.padding(top = 24.dp)
+												.fillMaxWidth(1f),
+											style = MaterialTheme.typography.h6,
+											textAlign = TextAlign.Start,
+
+											)
+
+										CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
+											Text(
+												releaseDate,
+												style = MaterialTheme.typography.body2
+											)
+										}
+										Text(
+											movieOverview,
+											Modifier
+												.wrapContentHeight(Alignment.Top)
+												.padding(top = 8.dp, bottom = 16.dp)
 										)
 									}
-									Text(
-										movieOverview,
-										Modifier
-											.wrapContentHeight(Alignment.Top)
-											.padding(top = 8.dp, bottom = 16.dp)
-									)
 								}
 
-								viewState.movieDetail?.videoId?.let {
-									YoutubePlayer(it, videoProgress)
+								viewState.movieDetail?.videoId?.let { videoId ->
+									Box(if(isFullscreen.value) Modifier.fillMaxSize() else Modifier) {
+										YoutubePlayer(videoId, videoProgress) {
+											isFullscreen.value = it
+										}
+									}
 								}
 							}
-
 						}
 					}
 
-					items(actors.size) {
-						ActorList(actors[it])
+					if(!isFullscreen.value) {
+						items(actors.size) {
+							ActorList(actors[it])
+						}
 					}
 				}
 			}
@@ -323,7 +263,7 @@ fun MovieDetailContent(viewState: MovieDetailState, actorList: List<Actor>?) {
 }
 
 @Composable
-fun YoutubePlayer(videoId: String, progressSeconds: MutableState<Float>) {
+fun YoutubePlayer(videoId: String, progressSeconds: MutableState<Float>, fullscreenCallback: (Boolean) -> Unit) {
 	val activity = LocalContext.current  as Activity
 	val lifecycle = LocalLifecycleOwner.current.lifecycle
 	val fullscreenHelper = rememberSaveable { FullScreenHelper() }
@@ -344,12 +284,14 @@ fun YoutubePlayer(videoId: String, progressSeconds: MutableState<Float>) {
 					activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
 					fullscreenHelper.enterFullScreen(activity)
 					Log.d("asd", "onYouTubePlayerEnterFullScreen")
+					fullscreenCallback(true)
 				}
 
 				override fun onYouTubePlayerExitFullScreen() {
 					activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR)
 					fullscreenHelper.exitFullScreen(activity)
 					Log.d("asd", "onYouTubePlayerExitFullScreen")
+					fullscreenCallback(false)
 				}
 			})
 		}
