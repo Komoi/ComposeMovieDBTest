@@ -44,17 +44,12 @@ class MoviesActivity : ComponentActivity() {
 			var darkTheme: Boolean by remember { mutableStateOf(isSystemDark) }
 
 			CompositionLocalProvider(LocalThemeToggle provides { darkTheme = !darkTheme }) {
-				CircularReveal(darkTheme, animationSpec = tween(3000)) { theme ->
+				CircularReveal(darkTheme, animationSpec = tween(1000)) { theme ->
 					ComposeTestTheme(theme) {
 						MoviesApp()
 					}
 				}
 			}
-
-			/*ComposeTestTheme {
-				// A surface container using the 'background' color from the theme
-
-			}*/
 		}
 	}
 }

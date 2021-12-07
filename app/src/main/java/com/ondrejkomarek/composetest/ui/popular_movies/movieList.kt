@@ -54,17 +54,7 @@ fun PopularMovies(viewModel: PopularMoviesViewModel, onPopularMovieClick: (Movie
 					Text(text = "Popular movies")
 				},
 				actions = {
-					IconButton(onClick = LocalThemeToggle.current
-						/*
-						if(darkTheme) {
-							AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-							//setNightMode(context, false)
-						} else {
-							AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-							//setNightMode(context, true)
-						}*/
-
-					) {
+					IconButton(onClick = LocalThemeToggle.current) {
 						Icon(Icons.Filled.Nightlight, contentDescription = null)
 					}
 				},
