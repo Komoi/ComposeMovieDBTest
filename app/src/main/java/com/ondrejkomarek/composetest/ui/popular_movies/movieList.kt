@@ -1,14 +1,17 @@
 package com.ondrejkomarek.composetest.ui.popular_movies
 
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Nightlight
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -23,10 +26,12 @@ import com.ondrejkomarek.composetest.network.MovieRepository
 import com.ondrejkomarek.composetest.ui.BaseViewModel
 import com.ondrejkomarek.composetest.ui.movie_detail.MovieDetailContent
 import com.ondrejkomarek.composetest.ui.universal.EmptyState
+import com.ondrejkomarek.composetest.ui.universal.LocalThemeToggle
 import com.ondrejkomarek.composetest.ui.universal.MyCircularProgressIndicator
 import com.ondrejkomarek.composetest.utility.Failure
 import com.ondrejkomarek.composetest.utility.ScreenState
 import com.ondrejkomarek.composetest.utility.fold
+import com.ondrejkomarek.composetest.utility.setNightMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,12 +42,31 @@ import javax.inject.Inject
 @Composable // for better reusability
 fun PopularMovies(viewModel: PopularMoviesViewModel, onPopularMovieClick: (Movie) -> Unit) {
 	val viewState = viewModel.state.collectAsState().value
+	val context = LocalContext.current
+
+	val isSystemDark = isSystemInDarkTheme()
+	val darkTheme: Boolean by remember { mutableStateOf(isSystemDark) }
 
 	Scaffold(
 		topBar = {
 			TopAppBar(
 				title = {
 					Text(text = "Popular movies")
+				},
+				actions = {
+					IconButton(onClick = LocalThemeToggle.current
+						/*
+						if(darkTheme) {
+							AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+							//setNightMode(context, false)
+						} else {
+							AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+							//setNightMode(context, true)
+						}*/
+
+					) {
+						Icon(Icons.Filled.Nightlight, contentDescription = null)
+					}
 				},
 				backgroundColor = MaterialTheme.colors.primaryVariant // TODO theme
 			)

@@ -3,6 +3,7 @@ package com.ondrejkomarek.composetest.ui.movie_detail
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.annotation.NonNull
 import androidx.compose.foundation.Image
@@ -35,6 +36,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.constraintlayout.compose.ConstraintSet
 import androidx.constraintlayout.compose.MotionLayout
 import androidx.lifecycle.SavedStateHandle
+import androidx.navigation.compose.rememberNavController
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import coil.request.ImageRequest
@@ -48,10 +50,7 @@ import com.ondrejkomarek.composetest.ui.movieIdArg
 import com.ondrejkomarek.composetest.ui.movieNameArg
 import com.ondrejkomarek.composetest.ui.universal.EmptyState
 import com.ondrejkomarek.composetest.ui.universal.MyCircularProgressIndicator
-import com.ondrejkomarek.composetest.utility.Failure
-import com.ondrejkomarek.composetest.utility.FullScreenHelper
-import com.ondrejkomarek.composetest.utility.ScreenState
-import com.ondrejkomarek.composetest.utility.fold
+import com.ondrejkomarek.composetest.utility.*
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.YouTubePlayerFullScreenListener
@@ -171,14 +170,20 @@ fun MovieDetailContent(viewState: MovieDetailState, actorList: List<Actor>?) {
 	val videoProgress = rememberSaveable { mutableStateOf(0f) }
 	val isFullscreen = rememberSaveable { mutableStateOf(false) }
 
-	BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+	BackHandler(enabled = isFullscreen.value) {
+		isFullscreen.value = false
+	}
+
+	Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.surface) { //, contentAlignment = Alignment.Center
 
 		Column() {
 
 			actorList?.let { actors ->
 				LazyColumn(state = scrollState) {
 					item {
-						Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
+						Column(modifier = Modifier
+							.fillMaxWidth()
+							.wrapContentHeight()) {
 							val movieTitle = viewState.movieDetail?.title ?: ""
 							val releaseDate = viewState.movieDetail?.releaseDate ?: ""
 							val posterUrl = viewState.movieDetail?.posterUrl ?: ""
@@ -242,7 +247,7 @@ fun MovieDetailContent(viewState: MovieDetailState, actorList: List<Actor>?) {
 
 								viewState.movieDetail?.videoId?.let { videoId ->
 									Box(if(isFullscreen.value) Modifier.fillMaxSize() else Modifier) {
-										YoutubePlayer(videoId, videoProgress) {
+										YoutubePlayer(isFullscreen.value, videoId, videoProgress) {
 											isFullscreen.value = it
 										}
 									}
@@ -263,10 +268,13 @@ fun MovieDetailContent(viewState: MovieDetailState, actorList: List<Actor>?) {
 }
 
 @Composable
-fun YoutubePlayer(videoId: String, progressSeconds: MutableState<Float>, fullscreenCallback: (Boolean) -> Unit) {
+fun YoutubePlayer(shouldBeFullScreen: Boolean, videoId: String, progressSeconds: MutableState<Float>, fullscreenCallback: (Boolean) -> Unit) {
 	val activity = LocalContext.current  as Activity
 	val lifecycle = LocalLifecycleOwner.current.lifecycle
 	val fullscreenHelper = rememberSaveable { FullScreenHelper() }
+	val configuration = LocalConfiguration.current
+	val screenHeight = configuration.screenHeightDp.dp
+	val screenWidth = configuration.screenWidthDp.dp
 
 	val youTubePlayer = remember(activity) {
 		YouTubePlayerView(activity).apply {
@@ -279,12 +287,15 @@ fun YoutubePlayer(videoId: String, progressSeconds: MutableState<Float>, fullscr
 					progressSeconds.value = second
 				}
 			})
+
 			addFullScreenListener(object : YouTubePlayerFullScreenListener {
 				override fun onYouTubePlayerEnterFullScreen() {
-					activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
+					activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE)
 					fullscreenHelper.enterFullScreen(activity)
 					Log.d("asd", "onYouTubePlayerEnterFullScreen")
 					fullscreenCallback(true)
+					minimumHeight = screenHeight.toPx.toInt()
+					minimumWidth = screenWidth.toPx.toInt()
 				}
 
 				override fun onYouTubePlayerExitFullScreen() {
@@ -292,9 +303,16 @@ fun YoutubePlayer(videoId: String, progressSeconds: MutableState<Float>, fullscr
 					fullscreenHelper.exitFullScreen(activity)
 					Log.d("asd", "onYouTubePlayerExitFullScreen")
 					fullscreenCallback(false)
+					minimumHeight = 0
+					minimumWidth = 0
 				}
 			})
 		}
+	}
+	if(youTubePlayer.isFullScreen() && shouldBeFullScreen.not()) {
+		youTubePlayer.exitFullScreen()
+	} else if (youTubePlayer.isFullScreen().not() && shouldBeFullScreen) {
+		youTubePlayer.enterFullScreen()
 	}
 
 	lifecycle.addObserver(youTubePlayer)

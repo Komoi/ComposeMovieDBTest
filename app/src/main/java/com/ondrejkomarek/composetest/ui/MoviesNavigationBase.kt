@@ -3,6 +3,8 @@ package com.ondrejkomarek.composetest.ui
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -25,6 +27,8 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.navArgument
 import com.ondrejkomarek.composetest.model.Movie
 import com.ondrejkomarek.composetest.ui.movie_detail.MovieDetailViewModel
+import com.ondrejkomarek.composetest.ui.universal.CircularReveal
+import com.ondrejkomarek.composetest.ui.universal.LocalThemeToggle
 
 const val movieIdArg = "movie_id"
 const val movieNameArg = "movie_name"
@@ -35,10 +39,22 @@ class MoviesActivity : ComponentActivity() {
 		super.onCreate(savedInstanceState)
 
 		setContent {
-			ComposeTestTheme {
-				// A surface container using the 'background' color from the theme
-				MoviesApp()
+
+			val isSystemDark = isSystemInDarkTheme()
+			var darkTheme: Boolean by remember { mutableStateOf(isSystemDark) }
+
+			CompositionLocalProvider(LocalThemeToggle provides { darkTheme = !darkTheme }) {
+				CircularReveal(darkTheme, animationSpec = tween(3000)) { theme ->
+					ComposeTestTheme(theme) {
+						MoviesApp()
+					}
+				}
 			}
+
+			/*ComposeTestTheme {
+				// A surface container using the 'background' color from the theme
+
+			}*/
 		}
 	}
 }
@@ -66,7 +82,6 @@ fun Movies(
 	navController: NavHostController,
 	onPopularMovieClick: (Movie) -> Unit
 ) {
-
 	MoviesContent(
 		navController,
 		onPopularMovieClick

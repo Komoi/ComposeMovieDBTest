@@ -20,6 +20,7 @@ ext.versions = [
 		kotlin             				: "1.5.21",
 		appcompat          				: "1.0.0",
 		compose			   				: "1.1.0-beta02",
+		compose_foundation_layout		: "1.0.1",
 		compose_hilt 	   				: "1.0.0-alpha03",
 		compose_navigation 				: "2.4.0-alpha07",
 		activity		   				: "1.3.1",
@@ -55,6 +56,7 @@ ext.deps = [
 				compose   : [
 						ui						: "androidx.compose.ui:ui:${versions.compose}",
 						material				: "androidx.compose.material:material:${versions.compose}",
+						foundation_layout		: "androidx.compose.foundation:foundation-layout:${versions.compose_foundation_layout}",
 						material_icons_extended	: "androidx.compose.material:material-icons-extended:${versions.compose}",
 						ui_tooling_preview		: "androidx.compose.ui:ui-tooling-preview:${versions.compose}",
 						navigation				: "androidx.navigation:navigation-compose:${versions.compose_navigation}",
