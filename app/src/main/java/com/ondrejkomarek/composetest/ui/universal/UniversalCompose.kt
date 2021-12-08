@@ -20,8 +20,11 @@ import com.ondrejkomarek.composetest.ui.popular_movies.PopularMoviesListState
 import android.graphics.Path
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.asComposePath
+import androidx.compose.ui.unit.dp
 import kotlin.math.hypot
 
 
@@ -39,7 +42,7 @@ fun EmptyState(modifier: Modifier = Modifier) {
 	Column(modifier.fillMaxSize(),
 		verticalArrangement = Arrangement.Center,
 		horizontalAlignment = Alignment.CenterHorizontally) {
-		CircularProgressIndicator()
+		Text(text = "There is no content here :/", style = MaterialTheme.typography.h5, modifier = Modifier.padding(24.dp))
 	}
 }
 

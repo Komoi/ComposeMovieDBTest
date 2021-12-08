@@ -46,7 +46,7 @@ class MoviesActivity : ComponentActivity() {
 			CompositionLocalProvider(LocalThemeToggle provides { darkTheme = !darkTheme }) {
 				CircularReveal(darkTheme, animationSpec = tween(1000)) { theme ->
 					ComposeTestTheme(theme) {
-						MoviesApp()
+						MoviesApp(darkTheme)
 					}
 				}
 			}
@@ -55,7 +55,7 @@ class MoviesActivity : ComponentActivity() {
 }
 
 @Composable
-fun MoviesApp() {
+fun MoviesApp(darkTheme: Boolean) {
 	val allScreens = AppNavigationScreens.values().toList()
 	/*
 	Need to import manually
@@ -65,7 +65,7 @@ import androidx.compose.runtime.setValue
 	 */
 	var currentScreen by rememberSaveable { mutableStateOf(AppNavigationScreens.PopularMovies) }
 	val navController = rememberNavController()
-	Movies(navController) {
+	Movies(navController, darkTheme) {
 		movie ->
 		navController.navigate("${AppNavigationScreens.MovieDetail.name}/${movie.id}/${movie.title}")
 
@@ -75,16 +75,18 @@ import androidx.compose.runtime.setValue
 @Composable
 fun Movies(
 	navController: NavHostController,
+	darkTheme: Boolean,
 	onPopularMovieClick: (Movie) -> Unit
 ) {
 	MoviesContent(
 		navController,
+		darkTheme,
 		onPopularMovieClick
 	)
 }
 
 @Composable
-fun MoviesContent(navController: NavHostController, onPopularMovieClick: (Movie) -> Unit) {
+fun MoviesContent(navController: NavHostController, darkTheme: Boolean, onPopularMovieClick: (Movie) -> Unit) {
 		NavHost(
 			navController = navController,
 			startDestination = AppNavigationScreens.PopularMovies.name,
@@ -92,7 +94,7 @@ fun MoviesContent(navController: NavHostController, onPopularMovieClick: (Movie)
 		) {
 			composable(AppNavigationScreens.PopularMovies.name) {
 				val viewModel = hiltViewModel<PopularMoviesViewModel>()
-				PopularMovies(viewModel, onPopularMovieClick)
+				PopularMovies(viewModel, darkTheme, onPopularMovieClick)
 			}
 
 

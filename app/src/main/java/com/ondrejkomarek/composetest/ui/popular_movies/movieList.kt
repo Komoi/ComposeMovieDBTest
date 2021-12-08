@@ -1,20 +1,27 @@
 package com.ondrejkomarek.composetest.ui.popular_movies
 
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.foundation.*
+import android.os.Handler
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Nightlight
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalTextInputService
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.annotation.ExperimentalCoilApi
@@ -24,14 +31,13 @@ import coil.transform.RoundedCornersTransformation
 import com.ondrejkomarek.composetest.model.Movie
 import com.ondrejkomarek.composetest.network.MovieRepository
 import com.ondrejkomarek.composetest.ui.BaseViewModel
-import com.ondrejkomarek.composetest.ui.movie_detail.MovieDetailContent
+import com.ondrejkomarek.composetest.ui.MoviesActivity
 import com.ondrejkomarek.composetest.ui.universal.EmptyState
 import com.ondrejkomarek.composetest.ui.universal.LocalThemeToggle
 import com.ondrejkomarek.composetest.ui.universal.MyCircularProgressIndicator
 import com.ondrejkomarek.composetest.utility.Failure
 import com.ondrejkomarek.composetest.utility.ScreenState
 import com.ondrejkomarek.composetest.utility.fold
-import com.ondrejkomarek.composetest.utility.setNightMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,31 +46,90 @@ import javax.inject.Inject
 
 @ExperimentalCoilApi
 @Composable // for better reusability
-fun PopularMovies(viewModel: PopularMoviesViewModel, onPopularMovieClick: (Movie) -> Unit) {
+fun PopularMovies(
+	viewModel: PopularMoviesViewModel,
+	darkTheme: Boolean,
+	onPopularMovieClick: (Movie) -> Unit
+) {
 	val viewState = viewModel.state.collectAsState().value
-	val context = LocalContext.current
+	val moviesActivity = LocalContext.current as MoviesActivity
 
-	val isSystemDark = isSystemInDarkTheme()
-	val darkTheme: Boolean by remember { mutableStateOf(isSystemDark) }
+	//val isSystemDark = isSystemInDarkTheme()
+	var isSearch: Boolean by remember { mutableStateOf(false) }
+	var searchText by rememberSaveable { mutableStateOf("") }
+	val focusRequester = remember { FocusRequester() }
+	val inputService = LocalTextInputService.current
+	val focus = remember { mutableStateOf(false) }
 
 	Scaffold(
 		topBar = {
 			TopAppBar(
 				title = {
-					Text(text = "Popular movies")
-				},
-				actions = {
-					IconButton(onClick = LocalThemeToggle.current) {
-						Icon(Icons.Filled.Nightlight, contentDescription = null)
+					if(isSearch) {
+						TextField(
+							value = searchText,
+							onValueChange = {
+								searchText = it
+							},
+							modifier = Modifier
+								.focusRequester(focusRequester),
+							singleLine = true,
+							colors = TextFieldDefaults.textFieldColors(
+								cursorColor = Color.White,
+								backgroundColor = MaterialTheme.colors.primaryVariant,
+								focusedIndicatorColor = MaterialTheme.colors.primaryVariant,
+								focusedLabelColor = MaterialTheme.colors.primaryVariant
+							)
+						)
+					} else {
+						Text(text = "Popular movies")
 					}
 				},
-				backgroundColor = MaterialTheme.colors.primaryVariant // TODO theme
+				actions = {
+					if(isSearch.not()) {
+						IconButton(onClick = LocalThemeToggle.current) {
+							Icon(
+								if(darkTheme) Icons.Filled.WbSunny else Icons.Filled.Nightlight,
+								contentDescription = null
+							)
+						}
+					}
+
+					if(isSearch.not()) {
+						IconButton(onClick = {
+							isSearch = true
+							val handler =
+								Handler() // TODO without this delay it crashes, because FocusRequester is not initialized
+							handler.postDelayed({
+								if(isSearch) {
+									focusRequester.requestFocus()
+								}
+							}, 200)
+
+						}) {
+							Icon(Icons.Filled.Search, contentDescription = null)
+						}
+					} else {
+						IconButton(onClick = {
+							isSearch = false
+							searchText = ""
+						}) {
+							Icon(Icons.Filled.Close, contentDescription = null)
+						}
+					}
+				},
+				backgroundColor = MaterialTheme.colors.primaryVariant // TODO theme?
 			)
 		}
 	) { innerPadding ->
 
 		when(viewState.state) {
-			ScreenState.CONTENT -> PopularMoviesContent(viewState, onPopularMovieClick, Modifier.padding(innerPadding))
+			ScreenState.CONTENT -> PopularMoviesContent(
+				viewState,
+				searchText,
+				onPopularMovieClick,
+				Modifier.padding(innerPadding)
+			)
 			ScreenState.PROGRESS -> MyCircularProgressIndicator()
 			ScreenState.EMPTY -> EmptyState()
 		}
@@ -73,14 +138,27 @@ fun PopularMovies(viewModel: PopularMoviesViewModel, onPopularMovieClick: (Movie
 
 @ExperimentalCoilApi
 @Composable // for better reusability
-fun PopularMoviesContent(viewState: PopularMoviesListState, onPopularMovieClick: (Movie) -> Unit, modifier: Modifier = Modifier) {
+fun PopularMoviesContent(
+	viewState: PopularMoviesListState,
+	searchText: String,
+	onPopularMovieClick: (Movie) -> Unit,
+	modifier: Modifier = Modifier
+) {
 	val scrollState = rememberLazyListState()
+	var shownMoviesCount = 0
 
 	Column(modifier) {
 		LazyColumn(state = scrollState) {
 			items(viewState.movies.size) {
-				MovieListCard(viewState.movies[it], onPopularMovieClick)
+				val movieItem = viewState.movies[it]
+				if((searchText.isNotBlank() && movieItem.title.contains(searchText, ignoreCase = true)) || searchText.isBlank()) {
+					MovieListCard(movieItem, onPopularMovieClick)
+					shownMoviesCount++
+				}
 			}
+		}
+		if(shownMoviesCount == 0) {
+			EmptyState()
 		}
 	}
 }

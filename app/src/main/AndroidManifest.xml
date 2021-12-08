@@ -41,7 +41,8 @@
 			android:name=".ui.MoviesActivity"
 			android:label="@string/app_name"
 			android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
-			android:theme="@style/Theme.ComposeTest.NoActionBar">
+			android:theme="@style/Theme.ComposeTest.NoActionBar"
+			android:windowSoftInputMode="adjustResize">
 		</activity>
 	</application>
 </manifest>
