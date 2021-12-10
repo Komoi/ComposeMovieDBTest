@@ -20,8 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalTextInputService
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.annotation.ExperimentalCoilApi
@@ -58,8 +58,6 @@ fun PopularMovies(
 	var isSearch: Boolean by remember { mutableStateOf(false) }
 	var searchText by rememberSaveable { mutableStateOf("") }
 	val focusRequester = remember { FocusRequester() }
-	val inputService = LocalTextInputService.current
-	val focus = remember { mutableStateOf(false) }
 
 	Scaffold(
 		topBar = {
@@ -79,7 +77,8 @@ fun PopularMovies(
 								backgroundColor = MaterialTheme.colors.primaryVariant,
 								focusedIndicatorColor = MaterialTheme.colors.primaryVariant,
 								focusedLabelColor = MaterialTheme.colors.primaryVariant
-							)
+							),
+							placeholder = { Text("Search movies") }
 						)
 					} else {
 						Text(text = "Popular movies")
@@ -122,13 +121,12 @@ fun PopularMovies(
 			)
 		}
 	) { innerPadding ->
-
 		when(viewState.state) {
 			ScreenState.CONTENT -> PopularMoviesContent(
 				viewState,
 				searchText,
 				onPopularMovieClick,
-				Modifier.padding(innerPadding)
+				//Modifier.padding(innerPadding)
 			)
 			ScreenState.PROGRESS -> MyCircularProgressIndicator()
 			ScreenState.EMPTY -> EmptyState()
@@ -145,19 +143,22 @@ fun PopularMoviesContent(
 	modifier: Modifier = Modifier
 ) {
 	val scrollState = rememberLazyListState()
-	var shownMoviesCount = 0
 
 	Column(modifier) {
 		LazyColumn(state = scrollState) {
-			items(viewState.movies.size) {
+			items(viewState.movies.size, key = { viewState.movies[it].id }) {
 				val movieItem = viewState.movies[it]
-				if((searchText.isNotBlank() && movieItem.title.contains(searchText, ignoreCase = true)) || searchText.isBlank()) {
+				if((searchText.isNotBlank() && movieItem.title.contains(
+						searchText,
+						ignoreCase = true
+					)) || searchText.isBlank()
+				) {
 					MovieListCard(movieItem, onPopularMovieClick)
-					shownMoviesCount++
 				}
 			}
 		}
-		if(shownMoviesCount == 0) {
+
+		if(viewState.movies.map { it.title }.filter { it.contains(searchText, ignoreCase = true) }.isEmpty()) {
 			EmptyState()
 		}
 	}
@@ -178,7 +179,7 @@ fun MovieListCard(movieItem: Movie, onMovieClick: (Movie) -> Unit, modifier: Mod
 		) {
 			Surface(
 				modifier = Modifier
-					.sizeIn(maxHeight = 120.dp),
+					.height(120.dp),
 				color = MaterialTheme.colors.onSurface,
 				shape = RoundedCornerShape(12.dp)
 			) {
@@ -190,6 +191,7 @@ fun MovieListCard(movieItem: Movie, onMovieClick: (Movie) -> Unit, modifier: Mod
 								.transformations(RoundedCornersTransformation(12f))
 						}
 					),
+					contentScale = ContentScale.Fit,
 					contentDescription = "Movie poster",
 					modifier = Modifier
 						.sizeIn(minHeight = 120.dp)
