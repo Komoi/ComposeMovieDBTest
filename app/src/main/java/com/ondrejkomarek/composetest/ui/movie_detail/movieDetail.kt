@@ -2,13 +2,14 @@ package com.ondrejkomarek.composetest.ui.movie_detail
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.os.Handler
 import android.util.Log
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.annotation.NonNull
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -30,13 +31,13 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.constraintlayout.compose.ConstraintSet
 import androidx.constraintlayout.compose.MotionLayout
 import androidx.lifecycle.SavedStateHandle
-import androidx.navigation.compose.rememberNavController
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import coil.request.ImageRequest
@@ -68,7 +69,7 @@ fun MovieDetail(viewModel: MovieDetailViewModel) {
 
 	// TODO reenable later when MotionLayout works CollapsableToolbar(viewState, viewState.movieDetail?.actors)
 	when(viewState.state) {
-		ScreenState.CONTENT -> MovieDetailContent(viewState, viewState.movieDetail?.actors)
+		ScreenState.CONTENT -> MovieDetailContainer(viewState, viewState.movieDetail?.actors)
 		ScreenState.PROGRESS -> MyCircularProgressIndicator()
 		ScreenState.EMPTY -> EmptyState()
 	}
@@ -152,7 +153,7 @@ fun CollapsableToolbar(viewState: MovieDetailState, actorList: List<Actor>?) {
 					actorList?.let { actors ->
 						LazyColumn(state = scrollState) {
 							items(actors.size) {
-								ActorList(actors[it])
+								ActorListItem(actors[it])
 							}
 						}
 					}
@@ -165,36 +166,134 @@ fun CollapsableToolbar(viewState: MovieDetailState, actorList: List<Actor>?) {
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun MovieDetailContent(viewState: MovieDetailState, actorList: List<Actor>?) {
-	val scrollState = rememberLazyListState()
-	val videoProgress = rememberSaveable { mutableStateOf(0f) }
+fun MovieDetailContainer(viewState: MovieDetailState, actorList: List<Actor>?) {
+	val videoProgress = rememberSaveable { mutableStateOf(0f) } // TODO need to take out of this
 	val isFullscreen = rememberSaveable { mutableStateOf(false) }
+
+	val configuration = LocalConfiguration.current
+	val screenHeight = configuration.screenHeightDp.dp
+	val screenWidth = configuration.screenWidthDp.dp
 
 	BackHandler(enabled = isFullscreen.value) {
 		isFullscreen.value = false
 	}
 
-	Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.surface) { //, contentAlignment = Alignment.Center
+	Surface(
+		modifier = Modifier.fillMaxSize(),
+		color = MaterialTheme.colors.surface
+	) { //, contentAlignment = Alignment.Center
 
-		Column() {
 
-			actorList?.let { actors ->
-				LazyColumn(state = scrollState) {
-					item {
-						Column(modifier = Modifier
+		if(screenHeight >= screenWidth) {
+			MovieDetailContent(isFullscreen, videoProgress, viewState, viewState.movieDetail?.actors)
+		} else {
+			MovieDetailContentLandscape(isFullscreen, videoProgress, viewState, viewState.movieDetail?.actors)
+		}
+	}
+}
+
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+fun MovieDetailContent(isFullscreen: MutableState<Boolean>, videoProgress: MutableState<Float>, viewState: MovieDetailState, actorList: List<Actor>?) {
+	val scrollState = rememberLazyListState()
+
+	Column() {
+
+		actorList?.let { actors ->
+			LazyColumn(state = scrollState) {
+				item {
+					Column(
+						modifier = Modifier
 							.fillMaxWidth()
-							.wrapContentHeight()) {
-							val movieTitle = viewState.movieDetail?.title ?: ""
-							val releaseDate = viewState.movieDetail?.releaseDate ?: ""
-							val posterUrl = viewState.movieDetail?.posterUrl ?: ""
-							val movieOverview = viewState.movieDetail?.overview ?: ""
+							.wrapContentHeight()
+					) {
+						val movieTitle = viewState.movieDetail?.title ?: ""
+						val releaseDate = viewState.movieDetail?.releaseDate ?: ""
+						val posterUrl = viewState.movieDetail?.posterUrl ?: ""
+						val movieOverview = viewState.movieDetail?.overview ?: ""
 
-							val configuration = LocalConfiguration.current
+						val configuration = LocalConfiguration.current
 
-							val screenHeight = configuration.screenHeightDp.dp
-							val screenWidth = configuration.screenWidthDp.dp
+						val screenHeight = configuration.screenHeightDp.dp
+						val screenWidth = configuration.screenWidthDp.dp
 
-							Column() {
+						Column() {
+
+							if(!isFullscreen.value) {
+								Image(
+									painter = rememberImagePainter(
+										data = posterUrl,
+										builder = {
+											ImageRequest.Builder(LocalContext.current)
+												.transformations(
+													RoundedCornersTransformation(12f)
+												).scale(Scale.FILL)
+										}
+									),
+									contentDescription = "Movie poster",
+									modifier = Modifier
+										.fillMaxWidth(1f)
+										// TODO does not work, 0 heightm not sure why .wrapContentHeight(Top)
+										.height(screenWidth / 2 * 3) // TODO do not display image when on landscape, show video instead.
+										.layoutId("poster")
+										.background(MaterialTheme.colors.primaryVariant),
+									contentScale = ContentScale.FillWidth
+								)
+
+								OverviewText(movieTitle, releaseDate, movieOverview)
+							}
+
+							viewState.movieDetail?.videoId?.let { videoId ->
+								Box(if(isFullscreen.value) Modifier.fillMaxSize() else Modifier) {
+									YoutubePlayer(isFullscreen.value, videoId, videoProgress) {
+										isFullscreen.value = it
+									}
+								}
+							}
+						}
+					}
+				}
+
+				if(!isFullscreen.value) {
+					items(actors.size) {
+						ActorListItem(actors[it])
+					}
+				}
+			}
+		}
+	}
+}
+
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+fun MovieDetailContentLandscape(isFullscreen: MutableState<Boolean>, videoProgress: MutableState<Float>, viewState: MovieDetailState, actorList: List<Actor>?) {
+	val scrollState = rememberLazyListState()
+
+	Column() {
+
+		actorList?.let { actors ->
+			LazyColumn(state = scrollState) {
+				item {
+					Column(
+						modifier = Modifier
+							.fillMaxWidth()
+							.wrapContentHeight()
+					) {
+						val movieTitle = viewState.movieDetail?.title ?: ""
+						val releaseDate = viewState.movieDetail?.releaseDate ?: ""
+						val posterUrl = viewState.movieDetail?.posterUrl ?: ""
+						val movieOverview = viewState.movieDetail?.overview ?: ""
+
+						Column() {
+
+							viewState.movieDetail?.videoId?.let { videoId ->
+								Box(if(isFullscreen.value) Modifier else Modifier) {
+									YoutubePlayer(isFullscreen.value, videoId, videoProgress) {
+										isFullscreen.value = it
+									}
+								}
+							}
+							Row() {
 
 								if(!isFullscreen.value) {
 									Image(
@@ -209,57 +308,23 @@ fun MovieDetailContent(viewState: MovieDetailState, actorList: List<Actor>?) {
 										),
 										contentDescription = "Movie poster",
 										modifier = Modifier
-											.fillMaxWidth(1f)
-											// TODO does not work, 0 heightm not sure why .wrapContentHeight(Top)
-											.height(screenWidth / 2 * 3) // TODO do not display image when on landscape, show video instead.
+											.height(200.dp)
 											.layoutId("poster")
-											.background(MaterialTheme.colors.primaryVariant),
-										contentScale = ContentScale.FillWidth
+											.padding(start = 16.dp, top = 24.dp),
+										contentScale = ContentScale.FillHeight
 									)
 
-									Column(Modifier.padding(start = 16.dp, end = 16.dp)) {
-										Text(
-											text = movieTitle,
-											modifier = Modifier
-												.layoutId("title")
-												.wrapContentHeight()
-												.padding(top = 24.dp)
-												.fillMaxWidth(1f),
-											style = MaterialTheme.typography.h6,
-											textAlign = TextAlign.Start,
-
-											)
-
-										CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
-											Text(
-												releaseDate,
-												style = MaterialTheme.typography.body2
-											)
-										}
-										Text(
-											movieOverview,
-											Modifier
-												.wrapContentHeight(Alignment.Top)
-												.padding(top = 8.dp, bottom = 16.dp)
-										)
-									}
-								}
-
-								viewState.movieDetail?.videoId?.let { videoId ->
-									Box(if(isFullscreen.value) Modifier.fillMaxSize() else Modifier) {
-										YoutubePlayer(isFullscreen.value, videoId, videoProgress) {
-											isFullscreen.value = it
-										}
-									}
+									OverviewText(movieTitle, releaseDate, movieOverview)
 								}
 							}
 						}
 					}
+				}
 
-					if(!isFullscreen.value) {
-						items(actors.size) {
-							ActorList(actors[it])
-						}
+				if(!isFullscreen.value) {
+
+					items(actors.size) {
+						ActorListItem(actors[it])
 					}
 				}
 			}
@@ -268,8 +333,43 @@ fun MovieDetailContent(viewState: MovieDetailState, actorList: List<Actor>?) {
 }
 
 @Composable
-fun YoutubePlayer(shouldBeFullScreen: Boolean, videoId: String, progressSeconds: MutableState<Float>, fullscreenCallback: (Boolean) -> Unit) {
-	val activity = LocalContext.current  as Activity
+fun OverviewText(movieTitle: String, releaseDate: String, movieOverview: String) {
+	Column(Modifier.padding(start = 16.dp, end = 16.dp)) {
+		Text(
+			text = movieTitle,
+			modifier = Modifier
+				.layoutId("title")
+				.wrapContentHeight()
+				.padding(top = 24.dp)
+				.fillMaxWidth(1f),
+			style = MaterialTheme.typography.h6,
+			textAlign = TextAlign.Start,
+
+			)
+
+		CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
+			Text(
+				releaseDate,
+				style = MaterialTheme.typography.body2
+			)
+		}
+		Text(
+			movieOverview,
+			Modifier
+				.wrapContentHeight(Alignment.Top)
+				.padding(top = 8.dp, bottom = 16.dp)
+		)
+	}
+}
+
+@Composable
+fun YoutubePlayer(
+	shouldBeFullScreen: Boolean,
+	videoId: String,
+	progressSeconds: MutableState<Float>,
+	fullscreenCallback: (Boolean) -> Unit
+) {
+	val activity = LocalContext.current as Activity
 	val lifecycle = LocalLifecycleOwner.current.lifecycle
 	val fullscreenHelper = rememberSaveable { FullScreenHelper() }
 	val configuration = LocalConfiguration.current
@@ -294,8 +394,8 @@ fun YoutubePlayer(shouldBeFullScreen: Boolean, videoId: String, progressSeconds:
 					fullscreenHelper.enterFullScreen(activity)
 					Log.d("asd", "onYouTubePlayerEnterFullScreen")
 					fullscreenCallback(true)
-					minimumHeight = screenHeight.toPx.toInt()
-					minimumWidth = screenWidth.toPx.toInt()
+					//minimumHeight = screenHeight.toPx.toInt()
+					//minimumWidth = screenWidth.toPx.toInt()
 				}
 
 				override fun onYouTubePlayerExitFullScreen() {
@@ -309,17 +409,25 @@ fun YoutubePlayer(shouldBeFullScreen: Boolean, videoId: String, progressSeconds:
 			})
 		}
 	}
-	if(youTubePlayer.isFullScreen() && shouldBeFullScreen.not()) {
-		youTubePlayer.exitFullScreen()
-	} else if (youTubePlayer.isFullScreen().not() && shouldBeFullScreen) {
-		youTubePlayer.enterFullScreen()
-	}
 
 	lifecycle.addObserver(youTubePlayer)
 
 	AndroidView(
+		modifier = if(shouldBeFullScreen) Modifier.height(screenHeight + Dp(activity.getStatusBarHeight().toFloat().toDp)) else Modifier,
 		factory = { youTubePlayer }
 	)
+
+	if(youTubePlayer.isFullScreen() && shouldBeFullScreen.not()) {
+		val handler = Handler() // TODO needed delay here, because when switching from port to land other youtube player was not ready for this.
+		handler.postDelayed({
+			youTubePlayer.exitFullScreen()
+		}, 300)
+	} else if(youTubePlayer.isFullScreen().not() && shouldBeFullScreen) {
+		val handler = Handler()
+		handler.postDelayed({
+			youTubePlayer.enterFullScreen()
+		}, 300)
+	}
 }
 
 
@@ -404,7 +512,7 @@ fun MotionComposeHeader(
 }
 
 @Composable // for better reusability
-fun ActorList(actor: Actor, modifier: Modifier = Modifier) {
+fun ActorListItem(actor: Actor, modifier: Modifier = Modifier) {
 	Column(
 		modifier = modifier
 			.padding(16.dp)
