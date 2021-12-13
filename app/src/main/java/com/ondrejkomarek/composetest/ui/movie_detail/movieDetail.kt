@@ -52,6 +52,7 @@ import com.ondrejkomarek.composetest.ui.movieNameArg
 import com.ondrejkomarek.composetest.ui.universal.EmptyState
 import com.ondrejkomarek.composetest.ui.universal.MyCircularProgressIndicator
 import com.ondrejkomarek.composetest.utility.*
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.YouTubePlayerFullScreenListener
@@ -69,7 +70,8 @@ fun MovieDetail(viewModel: MovieDetailViewModel) {
 
 	// TODO reenable later when MotionLayout works CollapsableToolbar(viewState, viewState.movieDetail?.actors)
 	when(viewState.state) {
-		ScreenState.CONTENT -> MovieDetailContainer(viewState, viewState.movieDetail?.actors)
+		ScreenState.CONTENT -> CollapsableToolbar(viewState, viewState.movieDetail?.actors)
+		//ScreenState.CONTENT -> MovieDetailContainer(viewState)
 		ScreenState.PROGRESS -> MyCircularProgressIndicator()
 		ScreenState.EMPTY -> EmptyState()
 	}
@@ -150,13 +152,14 @@ fun CollapsableToolbar(viewState: MovieDetailState, actorList: List<Actor>?) {
 					progress = if(swipingState.progress.to == SwipingStates.COLLAPSED) swipingState.progress.fraction else 1f - swipingState.progress.fraction,
 					swipingState = swipingState.currentValue
 				) {
-					actorList?.let { actors ->
+					MovieDetailContainer(viewState)
+					/*actorList?.let { actors ->
 						LazyColumn(state = scrollState) {
 							items(actors.size) {
 								ActorListItem(actors[it])
 							}
 						}
-					}
+					}*/
 				}
 			}
 		}
@@ -166,7 +169,7 @@ fun CollapsableToolbar(viewState: MovieDetailState, actorList: List<Actor>?) {
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun MovieDetailContainer(viewState: MovieDetailState, actorList: List<Actor>?) {
+fun MovieDetailContainer(viewState: MovieDetailState) {
 	val videoProgress = rememberSaveable { mutableStateOf(0f) } // TODO need to take out of this
 	val isFullscreen = rememberSaveable { mutableStateOf(false) }
 
@@ -220,7 +223,7 @@ fun MovieDetailContent(isFullscreen: MutableState<Boolean>, videoProgress: Mutab
 						Column() {
 
 							if(!isFullscreen.value) {
-								Image(
+								/*Image(
 									painter = rememberImagePainter(
 										data = posterUrl,
 										builder = {
@@ -234,11 +237,11 @@ fun MovieDetailContent(isFullscreen: MutableState<Boolean>, videoProgress: Mutab
 									modifier = Modifier
 										.fillMaxWidth(1f)
 										// TODO does not work, 0 heightm not sure why .wrapContentHeight(Top)
-										.height(screenWidth / 2 * 3) // TODO do not display image when on landscape, show video instead.
+										.height(screenWidth / 2 * 3)
 										.layoutId("poster")
 										.background(MaterialTheme.colors.primaryVariant),
 									contentScale = ContentScale.FillWidth
-								)
+								)*/
 
 								OverviewText(movieTitle, releaseDate, movieOverview)
 							}
@@ -386,6 +389,14 @@ fun YoutubePlayer(
 				override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) {
 					progressSeconds.value = second
 				}
+
+				override fun onStateChange(
+					youTubePlayer: YouTubePlayer,
+					state: PlayerConstants.PlayerState
+				) {
+					Log.d("onStateChange", "onStateChange: ${state.name}")
+					super.onStateChange(youTubePlayer, state)
+				}
 			})
 
 			addFullScreenListener(object : YouTubePlayerFullScreenListener {
@@ -441,6 +452,9 @@ fun MotionComposeHeader(
 	swipingState: SwipingStates,
 	scrollableBody: @Composable () -> Unit
 ) {
+	val configuration = LocalConfiguration.current
+	val screenHeight = configuration.screenHeightDp.dp
+	val screenWidth = configuration.screenWidthDp.dp
 
 	MotionLayout(
 		start = JsonConstraintSetStart(),
@@ -448,7 +462,8 @@ fun MotionComposeHeader(
 		progress = progress,
 		modifier = Modifier
 			.fillMaxWidth()
-			.wrapContentHeight(),
+			.wrapContentHeight()
+			//.wrapContentHeight(),
 	) {
 
 		Image(
@@ -463,7 +478,8 @@ fun MotionComposeHeader(
 			contentDescription = "Movie poster",
 			modifier = Modifier
 				.fillMaxWidth(1f)
-				.wrapContentHeight()
+				.height(screenWidth / 2 * 3)
+				//.wrapContentHeight()
 				.layoutId("poster")
 				.background(MaterialTheme.colors.primaryVariant),
 			contentScale = ContentScale.FillWidth,
@@ -498,13 +514,14 @@ fun MotionComposeHeader(
 				.layoutId("content")
 		) {
 			Column() {
-				CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
+				/*CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
 					Text(
 						releaseDate,
 						style = MaterialTheme.typography.body2
 					)
 				}
-				Text(movieOverview, Modifier.wrapContentHeight(Alignment.Top))
+				Text(movieOverview, Modifier.wrapContentHeight(Alignment.Top))*/
+				//OverviewText(movieTitle, releaseDate, movieOverview)
 				scrollableBody()
 			}
 		}
