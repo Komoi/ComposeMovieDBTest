@@ -9,7 +9,6 @@ import androidx.annotation.NonNull
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -68,10 +67,29 @@ import javax.inject.Inject
 fun MovieDetail(viewModel: MovieDetailViewModel) {
 	val viewState = viewModel.state.collectAsState().value
 
-	// TODO reenable later when MotionLayout works CollapsableToolbar(viewState, viewState.movieDetail?.actors)
+	val videoProgress = rememberSaveable { mutableStateOf(0f) }
+	val isFullscreen = rememberSaveable { mutableStateOf(false) }
+
+	val configuration = LocalConfiguration.current
+	val screenHeight = configuration.screenHeightDp.dp
+	val screenWidth = configuration.screenWidthDp.dp
+
+	BackHandler(enabled = isFullscreen.value) {
+		isFullscreen.value = false
+	}
+
 	when(viewState.state) {
-		ScreenState.CONTENT -> CollapsableToolbar(viewState, viewState.movieDetail?.actors)
-		//ScreenState.CONTENT -> MovieDetailContainer(viewState)
+		ScreenState.CONTENT -> {
+			if(screenHeight >= screenWidth) {
+				CollapsableToolbar(
+					isFullscreen,
+					videoProgress,
+					viewState
+				)
+			} else {
+				MovieDetailContainer(isFullscreen, videoProgress, viewState)
+			}
+		}
 		ScreenState.PROGRESS -> MyCircularProgressIndicator()
 		ScreenState.EMPTY -> EmptyState()
 	}
@@ -79,14 +97,16 @@ fun MovieDetail(viewModel: MovieDetailViewModel) {
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun CollapsableToolbar(viewState: MovieDetailState, actorList: List<Actor>?) {
-	val scrollState = rememberLazyListState()
+fun CollapsableToolbar(
+	isFullscreen: MutableState<Boolean>,
+	videoProgress: MutableState<Float>,
+	viewState: MovieDetailState
+) {
 	val swipingState = rememberSwipeableState(initialValue = SwipingStates.EXPANDED)
 
-	BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+	BoxWithConstraints(modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.surface)) {
 
 		val heightInPx = with(LocalDensity.current) { maxHeight.toPx() } // Get height of screen
-		// TODO reenable with motion layout
 		val connection = remember {
 			object : NestedScrollConnection {
 
@@ -138,11 +158,6 @@ fun CollapsableToolbar(viewState: MovieDetailState, actorList: List<Actor>?) {
 				)
 				.nestedScroll(connection)
 		) {
-			/*var animateToCollapsedState by remember { mutableStateOf(false) }
-			val progress by animateFloatAsState(
-				targetValue = if(animateToCollapsedState) 1f else 0f, // Based on boolean we change progress target // animateToEnd?? IDK
-				animationSpec = tween(1000) // specifying animation type - Inbetweening animation with 1000ms duration
-			)*/
 			Column() {
 				MotionComposeHeader(
 					viewState.movieDetail?.posterUrl ?: "",
@@ -152,15 +167,87 @@ fun CollapsableToolbar(viewState: MovieDetailState, actorList: List<Actor>?) {
 					progress = if(swipingState.progress.to == SwipingStates.COLLAPSED) swipingState.progress.fraction else 1f - swipingState.progress.fraction,
 					swipingState = swipingState.currentValue
 				) {
-					MovieDetailContainer(viewState)
-					/*actorList?.let { actors ->
-						LazyColumn(state = scrollState) {
-							items(actors.size) {
-								ActorListItem(actors[it])
-							}
-						}
-					}*/
+					MovieDetailContainer(isFullscreen, videoProgress, viewState)
 				}
+			}
+		}
+	}
+}
+
+
+@Composable
+fun MotionComposeHeader(
+	posterUrl: String,
+	movieTitle: String,
+	releaseDate: String,
+	movieOverview: String,
+	progress: Float,
+	swipingState: SwipingStates,
+	scrollableBody: @Composable () -> Unit
+) {
+	val configuration = LocalConfiguration.current
+	val screenHeight = configuration.screenHeightDp.dp
+	val screenWidth = configuration.screenWidthDp.dp
+
+	MotionLayout(
+		start = JsonConstraintSetStart(),
+		end = JsonConstraintSetEnd(),
+		progress = progress,
+		modifier = Modifier
+			.fillMaxWidth()
+			.wrapContentHeight()
+		//.wrapContentHeight(),
+	) {
+
+		Image(
+			painter = rememberImagePainter(
+				data = posterUrl,
+				builder = {
+					ImageRequest.Builder(LocalContext.current).transformations(
+						RoundedCornersTransformation(12f)
+					).scale(Scale.FIT)
+				}
+			),
+			contentDescription = "Movie poster",
+			modifier = Modifier
+				.fillMaxWidth(1f)
+				.height(screenWidth / 2 * 3)
+				//.wrapContentHeight()
+				.layoutId("poster")
+				.background(MaterialTheme.colors.primaryVariant),
+			contentScale = ContentScale.FillWidth,
+			alpha = 1f - progress
+		)
+
+		Text(
+			text = movieTitle,
+			maxLines = when(swipingState) {
+				SwipingStates.EXPANDED -> 3
+				SwipingStates.COLLAPSED -> 1
+			},
+			overflow = TextOverflow.Ellipsis,
+			modifier = Modifier
+				.layoutId("title")
+				.wrapContentHeight()
+				.fillMaxWidth(1f),
+			color = motionColor(
+				"title",
+				"textColor"
+			), // Extracting color value from motionProperties
+			fontSize = motionFontSize(
+				"title",
+				"textSize"
+			), // Extracting font size value from motionProperties
+			style = MaterialTheme.typography.h6,
+			textAlign = TextAlign.Start,
+
+			)
+		Box(
+			Modifier
+				.layoutId("content")
+		) {
+			Column() {
+				scrollableBody()
 			}
 		}
 	}
@@ -169,35 +256,46 @@ fun CollapsableToolbar(viewState: MovieDetailState, actorList: List<Actor>?) {
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun MovieDetailContainer(viewState: MovieDetailState) {
-	val videoProgress = rememberSaveable { mutableStateOf(0f) } // TODO need to take out of this
-	val isFullscreen = rememberSaveable { mutableStateOf(false) }
-
+fun MovieDetailContainer(
+	isFullscreen: MutableState<Boolean>,
+	videoProgress: MutableState<Float>,
+	viewState: MovieDetailState
+) {
 	val configuration = LocalConfiguration.current
 	val screenHeight = configuration.screenHeightDp.dp
 	val screenWidth = configuration.screenWidthDp.dp
 
-	BackHandler(enabled = isFullscreen.value) {
-		isFullscreen.value = false
-	}
-
 	Surface(
 		modifier = Modifier.fillMaxSize(),
 		color = MaterialTheme.colors.surface
-	) { //, contentAlignment = Alignment.Center
-
+	) {
 
 		if(screenHeight >= screenWidth) {
-			MovieDetailContent(isFullscreen, videoProgress, viewState, viewState.movieDetail?.actors)
+			MovieDetailContent(
+				isFullscreen,
+				videoProgress,
+				viewState,
+				viewState.movieDetail?.actors
+			)
 		} else {
-			MovieDetailContentLandscape(isFullscreen, videoProgress, viewState, viewState.movieDetail?.actors)
+			MovieDetailContentLandscape(
+				isFullscreen,
+				videoProgress,
+				viewState,
+				viewState.movieDetail?.actors
+			)
 		}
 	}
 }
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun MovieDetailContent(isFullscreen: MutableState<Boolean>, videoProgress: MutableState<Float>, viewState: MovieDetailState, actorList: List<Actor>?) {
+fun MovieDetailContent(
+	isFullscreen: MutableState<Boolean>,
+	videoProgress: MutableState<Float>,
+	viewState: MovieDetailState,
+	actorList: List<Actor>?
+) {
 	val scrollState = rememberLazyListState()
 
 	Column() {
@@ -210,40 +308,13 @@ fun MovieDetailContent(isFullscreen: MutableState<Boolean>, videoProgress: Mutab
 							.fillMaxWidth()
 							.wrapContentHeight()
 					) {
-						val movieTitle = viewState.movieDetail?.title ?: ""
 						val releaseDate = viewState.movieDetail?.releaseDate ?: ""
-						val posterUrl = viewState.movieDetail?.posterUrl ?: ""
 						val movieOverview = viewState.movieDetail?.overview ?: ""
-
-						val configuration = LocalConfiguration.current
-
-						val screenHeight = configuration.screenHeightDp.dp
-						val screenWidth = configuration.screenWidthDp.dp
 
 						Column() {
 
 							if(!isFullscreen.value) {
-								/*Image(
-									painter = rememberImagePainter(
-										data = posterUrl,
-										builder = {
-											ImageRequest.Builder(LocalContext.current)
-												.transformations(
-													RoundedCornersTransformation(12f)
-												).scale(Scale.FILL)
-										}
-									),
-									contentDescription = "Movie poster",
-									modifier = Modifier
-										.fillMaxWidth(1f)
-										// TODO does not work, 0 heightm not sure why .wrapContentHeight(Top)
-										.height(screenWidth / 2 * 3)
-										.layoutId("poster")
-										.background(MaterialTheme.colors.primaryVariant),
-									contentScale = ContentScale.FillWidth
-								)*/
-
-								OverviewText(movieTitle, releaseDate, movieOverview)
+								OverviewText(null, releaseDate, movieOverview)
 							}
 
 							viewState.movieDetail?.videoId?.let { videoId ->
@@ -269,7 +340,12 @@ fun MovieDetailContent(isFullscreen: MutableState<Boolean>, videoProgress: Mutab
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun MovieDetailContentLandscape(isFullscreen: MutableState<Boolean>, videoProgress: MutableState<Float>, viewState: MovieDetailState, actorList: List<Actor>?) {
+fun MovieDetailContentLandscape(
+	isFullscreen: MutableState<Boolean>,
+	videoProgress: MutableState<Float>,
+	viewState: MovieDetailState,
+	actorList: List<Actor>?
+) {
 	val scrollState = rememberLazyListState()
 
 	Column() {
@@ -336,19 +412,22 @@ fun MovieDetailContentLandscape(isFullscreen: MutableState<Boolean>, videoProgre
 }
 
 @Composable
-fun OverviewText(movieTitle: String, releaseDate: String, movieOverview: String) {
+fun OverviewText(movieTitle: String?, releaseDate: String, movieOverview: String) {
 	Column(Modifier.padding(start = 16.dp, end = 16.dp)) {
-		Text(
-			text = movieTitle,
-			modifier = Modifier
-				.layoutId("title")
-				.wrapContentHeight()
-				.padding(top = 24.dp)
-				.fillMaxWidth(1f),
-			style = MaterialTheme.typography.h6,
-			textAlign = TextAlign.Start,
+		Spacer(modifier = Modifier.padding(top = 24.dp))
 
-			)
+		movieTitle?.let {
+			Text(
+				text = movieTitle ?: "",
+				modifier = Modifier
+					.layoutId("title")
+					.wrapContentHeight()
+					.fillMaxWidth(1f),
+				style = MaterialTheme.typography.h6,
+				textAlign = TextAlign.Start,
+
+				)
+		}
 
 		CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
 			Text(
@@ -424,12 +503,17 @@ fun YoutubePlayer(
 	lifecycle.addObserver(youTubePlayer)
 
 	AndroidView(
-		modifier = if(shouldBeFullScreen) Modifier.height(screenHeight + Dp(activity.getStatusBarHeight().toFloat().toDp)) else Modifier,
+		modifier = if(shouldBeFullScreen) Modifier.height(
+			screenHeight + Dp(
+				activity.getStatusBarHeight().toFloat().toDp
+			)
+		) else Modifier,
 		factory = { youTubePlayer }
 	)
 
 	if(youTubePlayer.isFullScreen() && shouldBeFullScreen.not()) {
-		val handler = Handler() // TODO needed delay here, because when switching from port to land other youtube player was not ready for this.
+		val handler =
+			Handler() // TODO needed delay here, because when switching from port to land other youtube player was not ready for this.
 		handler.postDelayed({
 			youTubePlayer.exitFullScreen()
 		}, 300)
@@ -438,93 +522,6 @@ fun YoutubePlayer(
 		handler.postDelayed({
 			youTubePlayer.enterFullScreen()
 		}, 300)
-	}
-}
-
-
-@Composable
-fun MotionComposeHeader(
-	posterUrl: String,
-	movieTitle: String,
-	releaseDate: String,
-	movieOverview: String,
-	progress: Float,
-	swipingState: SwipingStates,
-	scrollableBody: @Composable () -> Unit
-) {
-	val configuration = LocalConfiguration.current
-	val screenHeight = configuration.screenHeightDp.dp
-	val screenWidth = configuration.screenWidthDp.dp
-
-	MotionLayout(
-		start = JsonConstraintSetStart(),
-		end = JsonConstraintSetEnd(),
-		progress = progress,
-		modifier = Modifier
-			.fillMaxWidth()
-			.wrapContentHeight()
-			//.wrapContentHeight(),
-	) {
-
-		Image(
-			painter = rememberImagePainter(
-				data = posterUrl,
-				builder = {
-					ImageRequest.Builder(LocalContext.current).transformations(
-						RoundedCornersTransformation(12f)
-					).scale(Scale.FIT)
-				}
-			),
-			contentDescription = "Movie poster",
-			modifier = Modifier
-				.fillMaxWidth(1f)
-				.height(screenWidth / 2 * 3)
-				//.wrapContentHeight()
-				.layoutId("poster")
-				.background(MaterialTheme.colors.primaryVariant),
-			contentScale = ContentScale.FillWidth,
-			alpha = 1f - progress
-		)
-
-		Text(
-			text = movieTitle,
-			maxLines = when(swipingState) {
-				SwipingStates.EXPANDED -> 3
-				SwipingStates.COLLAPSED -> 1
-			},
-			overflow = TextOverflow.Ellipsis,
-			modifier = Modifier
-				.layoutId("title")
-				.wrapContentHeight()
-				.fillMaxWidth(1f),
-			color = motionColor(
-				"title",
-				"textColor"
-			), // Extracting color value from motionProperties
-			fontSize = motionFontSize(
-				"title",
-				"textSize"
-			), // Extracting font size value from motionProperties
-			style = MaterialTheme.typography.h6,
-			textAlign = TextAlign.Start,
-
-			)
-		Box(
-			Modifier
-				.layoutId("content")
-		) {
-			Column() {
-				/*CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
-					Text(
-						releaseDate,
-						style = MaterialTheme.typography.body2
-					)
-				}
-				Text(movieOverview, Modifier.wrapContentHeight(Alignment.Top))*/
-				//OverviewText(movieTitle, releaseDate, movieOverview)
-				scrollableBody()
-			}
-		}
 	}
 }
 
@@ -542,25 +539,6 @@ fun ActorListItem(actor: Actor, modifier: Modifier = Modifier) {
 		}
 	}
 }
-
-/*
-@ExperimentalCoilApi
-@Composable // for better reusability
-fun MovieDetail(movieItem: Movie, onMovieClick: (Int) -> Unit, modifier: Modifier = Modifier) {
-	Card(
-		backgroundColor = MaterialTheme.colors.surface,
-		modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
-	){
-		Row(
-			modifier = modifier
-				.clickable(onClick = { onMovieClick(movieItem.id) })
-				.padding(16.dp)
-				.fillMaxWidth(1f)
-		) {
-
-		}
-	}
-}*/
 
 // Helper class defining swiping State
 enum class SwipingStates {
