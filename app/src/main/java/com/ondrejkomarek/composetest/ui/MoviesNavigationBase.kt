@@ -5,30 +5,24 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.ondrejkomarek.composetest.model.Movie
 import com.ondrejkomarek.composetest.navigation.AppNavigationScreens
 import com.ondrejkomarek.composetest.ui.movie_detail.MovieDetail
+import com.ondrejkomarek.composetest.ui.movie_detail.MovieDetailViewModel
 import com.ondrejkomarek.composetest.ui.popular_movies.PopularMovies
 import com.ondrejkomarek.composetest.ui.popular_movies.PopularMoviesViewModel
 import com.ondrejkomarek.composetest.ui.theme.ComposeTestTheme
-import dagger.hilt.android.AndroidEntryPoint
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavType
-import androidx.navigation.compose.navArgument
-import com.ondrejkomarek.composetest.model.Movie
-import com.ondrejkomarek.composetest.ui.movie_detail.MovieDetailViewModel
 import com.ondrejkomarek.composetest.ui.universal.CircularReveal
 import com.ondrejkomarek.composetest.ui.universal.LocalThemeToggle
+import dagger.hilt.android.AndroidEntryPoint
 
 const val movieIdArg = "movie_id"
 const val movieNameArg = "movie_name"
@@ -56,17 +50,8 @@ class MoviesActivity : ComponentActivity() {
 
 @Composable
 fun MoviesApp(darkTheme: Boolean) {
-	val allScreens = AppNavigationScreens.values().toList()
-	/*
-	Need to import manually
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-	 */
-	var currentScreen by rememberSaveable { mutableStateOf(AppNavigationScreens.PopularMovies) }
 	val navController = rememberNavController()
-	Movies(navController, darkTheme) {
-		movie ->
+	Movies(navController, darkTheme) { movie ->
 		navController.navigate("${AppNavigationScreens.MovieDetail.name}/${movie.id}/${movie.title}")
 
 	}
@@ -86,29 +71,32 @@ fun Movies(
 }
 
 @Composable
-fun MoviesContent(navController: NavHostController, darkTheme: Boolean, onPopularMovieClick: (Movie) -> Unit) {
-		NavHost(
-			navController = navController,
-			startDestination = AppNavigationScreens.PopularMovies.name,
-			//modifier = Modifier.padding(innerPadding)
-		) {
-			composable(AppNavigationScreens.PopularMovies.name) {
-				val viewModel = hiltViewModel<PopularMoviesViewModel>()
-				PopularMovies(viewModel, darkTheme, onPopularMovieClick)
-			}
-
-
-			composable(route = "${AppNavigationScreens.MovieDetail.name}/{$movieIdArg}/{$movieNameArg}",
-				arguments = listOf(
-					navArgument(movieIdArg) {
-						type = NavType.IntType
-					},
-					navArgument(movieNameArg) {
-						type = NavType.StringType
-					}
-				)) {
-				val viewModel = hiltViewModel<MovieDetailViewModel>()
-				MovieDetail(viewModel)
-			}
+fun MoviesContent(
+	navController: NavHostController,
+	darkTheme: Boolean,
+	onPopularMovieClick: (Movie) -> Unit
+) {
+	NavHost(
+		navController = navController,
+		startDestination = AppNavigationScreens.PopularMovies.name,
+	) {
+		composable(AppNavigationScreens.PopularMovies.name) {
+			val viewModel = hiltViewModel<PopularMoviesViewModel>()
+			PopularMovies(viewModel, darkTheme, onPopularMovieClick)
 		}
+
+
+		composable(route = "${AppNavigationScreens.MovieDetail.name}/{$movieIdArg}/{$movieNameArg}",
+			arguments = listOf(
+				navArgument(movieIdArg) {
+					type = NavType.IntType
+				},
+				navArgument(movieNameArg) {
+					type = NavType.StringType
+				}
+			)) {
+			val viewModel = hiltViewModel<MovieDetailViewModel>()
+			MovieDetail(viewModel)
+		}
+	}
 }
