@@ -46,6 +46,7 @@ fun EmptyState(modifier: Modifier = Modifier) {
 	}
 }
 
+// https://dev.to/bmonjoie/jetpack-compose-reveal-effect-1fao
 fun Modifier.circularReveal(@FloatRange(from = 0.0, to = 1.0) progress: Float, offset: Offset? = null) = clip(CircularRevealShape(progress, offset))
 
 private class CircularRevealShape(

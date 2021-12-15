@@ -38,6 +38,14 @@
 		</activity>
 
 		<activity
+			android:name=".ui.codelabs.animation.AnimationActivity"
+			android:exported="true"
+			android:label="@string/app_name"
+			android:theme="@style/Theme.Animation">
+		</activity>
+
+
+		<activity
 			android:name=".ui.MoviesActivity"
 			android:label="@string/app_name"
 			android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"

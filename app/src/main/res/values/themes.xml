@@ -23,4 +23,9 @@
 
 	<style name="Theme.ComposeTest.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 
+	<style name="Theme.Animation" parent="android:Theme.Material.NoActionBar">
+		<item name="android:colorPrimary">@color/purple_500</item>
+		<item name="android:colorPrimaryDark">@color/purple_700</item>
+	</style>
+
 </resources>
