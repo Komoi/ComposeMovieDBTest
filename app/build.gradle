@@ -67,8 +67,11 @@ dependencies {
 	implementation deps.android_x.compose.foundation_layout
 	implementation deps.constraintlayout.constraintlayout_compose
 
-	// Coil image lib
+	// Image libs
 	implementation deps.image.coil
+	implementation deps.image.landscapist_coil
+	implementation deps.image.landscapist_glide
+	implementation deps.image.landscapist_fresco
 
 	// Dependency injection
 	implementation deps.dagger.hilt

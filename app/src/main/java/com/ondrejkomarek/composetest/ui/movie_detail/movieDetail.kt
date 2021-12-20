@@ -18,6 +18,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -27,6 +30,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -42,6 +46,7 @@ import coil.compose.rememberImagePainter
 import coil.request.ImageRequest
 import coil.size.Scale
 import coil.transform.RoundedCornersTransformation
+import com.ondrejkomarek.composetest.R
 import com.ondrejkomarek.composetest.model.Actor
 import com.ondrejkomarek.composetest.model.MovieDetail
 import com.ondrejkomarek.composetest.network.MovieRepository
@@ -56,6 +61,8 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.YouTubePlayerFullScreenListener
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
+import com.skydoves.landscapist.CircularReveal
+import com.skydoves.landscapist.glide.GlideImage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -104,7 +111,11 @@ fun CollapsableToolbar(
 ) {
 	val swipingState = rememberSwipeableState(initialValue = SwipingStates.EXPANDED)
 
-	BoxWithConstraints(modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.surface)) {
+	BoxWithConstraints(
+		modifier = Modifier
+			.fillMaxSize()
+			.background(MaterialTheme.colors.surface)
+	) {
 
 		val heightInPx = with(LocalDensity.current) { maxHeight.toPx() } // Get height of screen
 		val connection = remember {
@@ -205,19 +216,39 @@ fun MotionComposeHeader(
 				builder = {
 					ImageRequest.Builder(LocalContext.current).transformations(
 						RoundedCornersTransformation(12f)
-					).scale(Scale.FIT)
+					)
+						.scale(Scale.FIT)
+						//.size(OriginalSize) // Need this to force loading when not having fixed height.
+						.placeholder(R.drawable.ic_launcher_background)
 				}
 			),
 			contentDescription = "Movie poster",
 			modifier = Modifier
 				.fillMaxWidth(1f)
-				.height(screenWidth / 2 * 3)
-				//.wrapContentHeight()
+				//.height(screenWidth / 2 * 3)
+				.wrapContentHeight(Alignment.Top, true)//Alignment.Top, true)
+				.defaultMinSize(Dp.Hairline, 300.dp)
+				//.height(IntrinsicSize.Max)
 				.layoutId("poster")
 				.background(MaterialTheme.colors.primaryVariant),
 			contentScale = ContentScale.FillWidth,
 			alpha = 1f - progress
 		)
+
+		/*GlideImage(
+			imageModel = posterUrl,
+			// Crop, Fit, Inside, FillHeight, FillWidth, None
+			contentScale = ContentScale.Fit,
+			// shows an image with a circular revealed animation.
+			circularReveal = CircularReveal(duration = 250),
+			alpha = 1f - progress,
+			modifier = Modifier
+				.fillMaxWidth(1f)
+				//.wrapContentHeight(Alignment.Top, false)//Alignment.Top, true)
+				//.defaultMinSize(Dp.Hairline, 1.dp)
+				.layoutId("poster")
+				.background(MaterialTheme.colors.primaryVariant),
+		)*/
 
 		Text(
 			text = movieTitle,
@@ -230,15 +261,21 @@ fun MotionComposeHeader(
 				.layoutId("title")
 				.wrapContentHeight()
 				.fillMaxWidth(1f),
-			color = motionColor(
-				"title",
-				"textColor"
-			), // Extracting color value from motionProperties
+			color = Color.White,
 			fontSize = motionFontSize(
 				"title",
 				"textSize"
 			), // Extracting font size value from motionProperties
-			style = MaterialTheme.typography.h6,
+			style = MaterialTheme.typography.h6.copy(
+				shadow = Shadow(
+					color = motionColor(
+						"title",
+						"shadowColor"
+					),// Extracting color value from motionProperties
+					offset = Offset(4f, 4f),
+					blurRadius = 8f
+				)
+			),
 			textAlign = TextAlign.Start,
 
 			)
@@ -381,8 +418,10 @@ fun MovieDetailContentLandscape(
 											builder = {
 												ImageRequest.Builder(LocalContext.current)
 													.transformations(
-														RoundedCornersTransformation(12f)
-													).scale(Scale.FILL)
+														RoundedCornersTransformation(12f),
+
+														)
+													.scale(Scale.FILL)
 											}
 										),
 										contentDescription = "Movie poster",
@@ -560,7 +599,7 @@ private fun JsonConstraintSetStart() = ConstraintSet(
 		top: ['poster', 'bottom', 16],
 		start: ['parent', 'start', 16],
 		custom: {
-			textColor: "#000000", 
+			shadowColor: "#FF000000",
 			textSize: 40
 		},
 	},
@@ -589,7 +628,7 @@ private fun JsonConstraintSetEnd() = ConstraintSet(
 		end: ['parent', 'end', 0], 
 		bottom: ['poster', 'bottom', 0],
 		custom: {
-			textColor: "#ffffff",
+			shadowColor: "#00000000",
 			textSize: 20
         },
 	},
