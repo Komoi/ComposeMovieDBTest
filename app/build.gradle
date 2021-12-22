@@ -94,6 +94,9 @@ dependencies {
 	// YouTube Player
 	implementation deps.youtube_player
 
+	// Nested Scroll for compose
+	implementation deps.nestedscrollview
+
 	// Testing
 	testImplementation testing_deps.junit
 	testImplementation testing_deps.android_x.junit

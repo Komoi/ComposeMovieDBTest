@@ -19,18 +19,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layoutId
+import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,12 +60,12 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.YouTubePlayerFullScreenListener
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
-import com.skydoves.landscapist.CircularReveal
-import com.skydoves.landscapist.glide.GlideImage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import moe.tlaster.nestedscrollview.VerticalNestedScrollView
+import moe.tlaster.nestedscrollview.rememberNestedScrollViewState
 import javax.inject.Inject
 
 @ExperimentalCoilApi
@@ -100,6 +99,67 @@ fun MovieDetail(viewModel: MovieDetailViewModel) {
 		ScreenState.PROGRESS -> MyCircularProgressIndicator()
 		ScreenState.EMPTY -> EmptyState()
 	}
+
+	//NestedTest()
+}
+
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+fun NestedTest() {
+	val nestedScrollViewState = rememberNestedScrollViewState()
+	VerticalNestedScrollView(
+		state = nestedScrollViewState,
+		header = {
+			Surface(
+				modifier = Modifier
+					.fillMaxWidth(),
+				color = MaterialTheme.colors.primary,
+			) {
+				Column(
+					modifier = Modifier.padding(16.dp)
+				) {
+					Text(text = "This is some awesome title")
+					Text(text = "This is some awesome title")
+					Text(text = "This is some awesome title")
+					Text(text = "This is some awesome title")
+					Text(text = "This is some awesome title")
+					Text(text = "This is some awesome title")
+					Text(text = "This is some awesome title")
+					Text(text = "This is some awesome title")
+					Text(text = "This is some awesome title")
+					Text(text = "This is some awesome title")
+					Text(text = "This is some awesome title")
+				}
+			}
+		},
+		content = {
+			val pages = (0..4).map { it }
+			Column {
+				TabRow(
+					selectedTabIndex = 0,
+					indicator = { tabPositions ->
+
+					}
+				) {
+					pages.forEachIndexed { index, title ->
+						Tab(
+							text = { Text(text = "tab $title") },
+							selected = false,
+							onClick = {}
+						)
+					}
+				}
+
+				LazyColumn {
+					items(100) {
+						ListItem {
+							Text(text = "item $it")
+						}
+					}
+				}
+			}
+		}
+	)
 }
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -334,8 +394,46 @@ fun MovieDetailContent(
 	actorList: List<Actor>?
 ) {
 	val scrollState = rememberLazyListState()
+	val nestedScrollViewState = rememberNestedScrollViewState()
+	VerticalNestedScrollView(
+		modifier = Modifier.wrapContentHeight(),
+		state = nestedScrollViewState,
+		header = {
+			Column(
+				modifier = Modifier
+					.fillMaxWidth()
+			) {
+				val releaseDate = viewState.movieDetail?.releaseDate ?: ""
+				val movieOverview = viewState.movieDetail?.overview ?: ""
 
-	Column() {
+				if(!isFullscreen.value) {
+					OverviewText(null, releaseDate, movieOverview)
+				}
+
+				viewState.movieDetail?.videoId?.let { videoId ->
+					Box(if(isFullscreen.value) Modifier.fillMaxSize() else Modifier) {
+						YoutubePlayer(isFullscreen.value, videoId, videoProgress) {
+							isFullscreen.value = it
+						}
+					}
+				}
+			}
+		},
+		content = {
+			actorList?.let { actors ->
+				LazyColumn {
+					if(!isFullscreen.value) {
+						items(actors.size) {
+							ActorListItem(actors[it])
+						}
+					}
+				}
+			}
+		}
+	)
+	// TODO youtube player is crashing in NestedScroll now when put to fullscreen, maybe newer version of compose will fix it.
+
+	/*Column() {
 
 		actorList?.let { actors ->
 			LazyColumn(state = scrollState) {
@@ -372,7 +470,7 @@ fun MovieDetailContent(
 				}
 			}
 		}
-	}
+	}*/
 }
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -384,7 +482,68 @@ fun MovieDetailContentLandscape(
 	actorList: List<Actor>?
 ) {
 	val scrollState = rememberLazyListState()
+	val nestedScrollViewState = rememberNestedScrollViewState()
+	VerticalNestedScrollView(
+		modifier = Modifier.wrapContentHeight(),
+		state = nestedScrollViewState,
+		header = {
+			val movieTitle = viewState.movieDetail?.title ?: ""
+			val releaseDate = viewState.movieDetail?.releaseDate ?: ""
+			val posterUrl = viewState.movieDetail?.posterUrl ?: ""
+			val movieOverview = viewState.movieDetail?.overview ?: ""
 
+			Column() {
+
+				viewState.movieDetail?.videoId?.let { videoId ->
+					Box(if(isFullscreen.value) Modifier else Modifier) {
+						YoutubePlayer(isFullscreen.value, videoId, videoProgress) {
+							isFullscreen.value = it
+						}
+					}
+				}
+				Row() {
+
+					if(!isFullscreen.value) {
+						Image(
+							painter = rememberImagePainter(
+								data = posterUrl,
+								builder = {
+									ImageRequest.Builder(LocalContext.current)
+										.transformations(
+											RoundedCornersTransformation(12f),
+
+											)
+										.scale(Scale.FILL)
+								}
+							),
+							contentDescription = "Movie poster",
+							modifier = Modifier
+								.height(200.dp)
+								.layoutId("poster")
+								.padding(start = 16.dp, top = 24.dp),
+							contentScale = ContentScale.FillHeight
+						)
+
+						OverviewText(movieTitle, releaseDate, movieOverview)
+					}
+				}
+			}
+		},
+		content = {
+			actorList?.let { actors ->
+				LazyColumn {
+					if(!isFullscreen.value) {
+						items(actors.size) {
+							ActorListItem(actors[it])
+						}
+					}
+				}
+			}
+		}
+	)
+
+
+	 /*
 	Column() {
 
 		actorList?.let { actors ->
@@ -447,7 +606,7 @@ fun MovieDetailContentLandscape(
 				}
 			}
 		}
-	}
+	}*/
 }
 
 @Composable

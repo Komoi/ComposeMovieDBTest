@@ -19,7 +19,7 @@ ext.versions = [
 		// GENERAL
 		kotlin             				: "1.5.21",
 		appcompat          				: "1.4.0",
-		compose			   				: "1.1.0-rc01",
+		compose			   				: "1.1.0-beta02",
 		compose_foundation_layout		: "1.0.1",
 		compose_hilt 	   				: "1.0.0-alpha03",
 		compose_navigation 				: "2.4.0-beta02",
@@ -38,6 +38,7 @@ ext.versions = [
 		moshi              				: "1.10.0",
 		okhttp             				: "4.8.1",
 		youtube_player     				: "10.0.5",
+		nestedscrollview     			: "0.7.0",
 
 		//TESTING ONLY
 		junit              				: "4.13",
@@ -46,7 +47,8 @@ ext.versions = [
 ]
 
 ext.deps = [
-		kotlin_stdlib: "org.jetbrains.kotlin:kotlin-stdlib:${versions.kotlin}",
+		kotlin_stdlib: "org" +
+				".jetbrains.kotlin:kotlin-stdlib:${versions.kotlin}",
 		timber       : "com.jakewharton.timber:timber:${versions.timber}",
 		coroutines   : "org.jetbrains.kotlinx:kotlinx-coroutines-android:${versions.coroutines}",
 		android_x    : [
@@ -93,7 +95,8 @@ ext.deps = [
 		constraintlayout: [
 				constraintlayout_compose: "androidx.constraintlayout:constraintlayout-compose:${versions.constraintlayout_compose}",
 		],
-		youtube_player	: "com.pierfrancescosoffritti.androidyoutubeplayer:core:${versions.youtube_player}",
+		youtube_player		: "com.pierfrancescosoffritti.androidyoutubeplayer:core:${versions.youtube_player}",
+		nestedscrollview	: "com.github.Tlaster:NestedScrollView:${versions.nestedscrollview}",
 ]
 
 ext.testing_deps = [
