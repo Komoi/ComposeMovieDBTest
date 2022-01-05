@@ -78,7 +78,7 @@ fun PopularMovies(
 								focusedIndicatorColor = MaterialTheme.colors.primaryVariant,
 								focusedLabelColor = MaterialTheme.colors.primaryVariant
 							),
-							placeholder = { Text("Search movies") }
+							placeholder = { Text( text = "Search movies", color = Color.White.copy(alpha = 0.5f)) }
 						)
 					} else {
 						Text(text = "Popular movies")
